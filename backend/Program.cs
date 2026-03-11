@@ -27,6 +27,30 @@ using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     db.Database.EnsureCreated(); // Cria o banco se não existir
+
+    // Se não existir usuário Master, cria um padrão para gerenciar o sistema.
+    if (!db.Users.Any(u => u.Role == UserRole.Master))
+    {
+        db.Users.Add(new User
+        {
+            Username = "master",
+            Password = "master", // Em produção, use hash + senha forte
+            FullName = "Usuário Master",
+            Email = "master@localhost",
+            Role = UserRole.Master
+        });
+        db.SaveChanges();
+    }
+
+    // Se não existir plano de contas, cria uma estrutura básica
+    if (!db.AccountPlans.Any())
+    {
+        db.AccountPlans.AddRange(
+            new AccountPlan { Code = "1.0", Name = "Receitas", Type = "Receita" },
+            new AccountPlan { Code = "2.0", Name = "Despesas", Type = "Despesa" }
+        );
+        db.SaveChanges();
+    }
 }
 
 // Permite que o front-end acesse a API via CORS.
@@ -56,64 +80,6 @@ static IResult? RequireRole(HttpRequest request, params UserRole[] allowedRoles)
     if (role is null) return Results.Unauthorized();
     return allowedRoles.Contains(role.Value) ? null : Results.Forbid();
 }
-
-// Rota: obter todas as transações (qualquer perfil pode consultar)
-app.MapGet("/api/transactions", async (AppDbContext db, HttpRequest req) =>
-{
-    if (RequireRole(req, UserRole.Master, UserRole.Admin, UserRole.User, UserRole.Viewer) is IResult notAllowed) return notAllowed;
-    return Results.Ok(await db.Transactions.AsNoTracking().ToListAsync());
-});
-
-// Rota: obter uma transação por ID
-app.MapGet("/api/transactions/{id:int}", async (int id, AppDbContext db, HttpRequest req) =>
-{
-    if (RequireRole(req, UserRole.Master, UserRole.Admin, UserRole.User, UserRole.Viewer) is IResult notAllowed) return notAllowed;
-    return await db.Transactions.FindAsync(id) is Transaction tx ? Results.Ok(tx) : Results.NotFound();
-});
-
-// Rota: criar uma nova transação
-app.MapPost("/api/transactions", async (Transaction transaction, AppDbContext db, HttpRequest req) =>
-{
-    if (RequireRole(req, UserRole.Master, UserRole.Admin, UserRole.User) is IResult notAllowed) return notAllowed;
-
-    // Se a data não for enviada, usa a data/hora atual
-    transaction.Date = transaction.Date == default ? DateTime.UtcNow : transaction.Date;
-    db.Transactions.Add(transaction); // adiciona no contexto
-    await db.SaveChangesAsync(); // salva no banco
-    return Results.Created($"/api/transactions/{transaction.Id}", transaction); // retorna 201 com o registro
-});
-
-// Rota: atualizar uma transação existente
-app.MapPut("/api/transactions/{id:int}", async (int id, Transaction input, AppDbContext db, HttpRequest req) =>
-{
-    if (RequireRole(req, UserRole.Master, UserRole.Admin, UserRole.User) is IResult notAllowed) return notAllowed;
-
-    var tx = await db.Transactions.FindAsync(id); // procura pelo ID
-    if (tx is null) return Results.NotFound(); // se não achar, retorna 404
-
-    // Atualiza os campos com os valores enviados
-    tx.Date = input.Date;
-    tx.Description = input.Description;
-    tx.Amount = input.Amount;
-    tx.Type = input.Type;
-    tx.Category = input.Category;
-
-    await db.SaveChangesAsync(); // salva as alterações
-    return Results.NoContent(); // retorna 204 (sem conteúdo)
-});
-
-// Rota: excluir uma transação
-app.MapDelete("/api/transactions/{id:int}", async (int id, AppDbContext db, HttpRequest req) =>
-{
-    if (RequireRole(req, UserRole.Master, UserRole.Admin, UserRole.User) is IResult notAllowed) return notAllowed;
-
-    var tx = await db.Transactions.FindAsync(id);
-    if (tx is null) return Results.NotFound();
-
-    db.Transactions.Remove(tx); // remove do banco
-    await db.SaveChangesAsync();
-    return Results.NoContent();
-});
 
 // ---------- ROTAS DE CADASTRO (MENU CADASTRO) ----------
 
@@ -180,43 +146,52 @@ app.MapPost("/api/users", async (User user, AppDbContext db, HttpRequest req) =>
     return Results.Created($"/api/users/{user.Id}", user);
 });
 
-// Plano de contas (somente Master/Admin)
+// Plano de contas (qualquer perfil pode consultar, apenas Master pode alterar)
 app.MapGet("/api/accountplans", async (AppDbContext db, HttpRequest req) =>
 {
-    if (RequireRole(req, UserRole.Master, UserRole.Admin) is IResult notAllowed) return notAllowed;
+    if (RequireRole(req, UserRole.Master, UserRole.Admin, UserRole.User, UserRole.Viewer) is IResult notAllowed) return notAllowed;
     return Results.Ok(await db.AccountPlans.AsNoTracking().ToListAsync());
 });
 
 app.MapGet("/api/accountplans/{id:int}", async (int id, AppDbContext db, HttpRequest req) =>
 {
-    if (RequireRole(req, UserRole.Master, UserRole.Admin) is IResult notAllowed) return notAllowed;
+    if (RequireRole(req, UserRole.Master, UserRole.Admin, UserRole.User, UserRole.Viewer) is IResult notAllowed) return notAllowed;
     return await db.AccountPlans.FindAsync(id) is var plan && plan is not null ? Results.Ok(plan) : Results.NotFound();
 });
 
 app.MapPost("/api/accountplans", async (AccountPlan plan, AppDbContext db, HttpRequest req) =>
 {
-    if (RequireRole(req, UserRole.Master, UserRole.Admin) is IResult notAllowed) return notAllowed;
+    if (RequireRole(req, UserRole.Master) is IResult notAllowed) return notAllowed;
     db.AccountPlans.Add(plan);
     await db.SaveChangesAsync();
     return Results.Created($"/api/accountplans/{plan.Id}", plan);
 });
 
-// Rota: resumo financeiro (total entradas, saídas e saldo)
-app.MapGet("/api/summary", async (AppDbContext db, HttpRequest req) =>
+app.MapPut("/api/accountplans/{id:int}", async (int id, AccountPlan input, AppDbContext db, HttpRequest req) =>
 {
-    if (RequireRole(req, UserRole.Master, UserRole.Admin, UserRole.User, UserRole.Viewer) is IResult notAllowed) return notAllowed;
+    if (RequireRole(req, UserRole.Master) is IResult notAllowed) return notAllowed;
 
-    var totalIn = await db.Transactions
-        .Where(t => t.Type == TransactionType.Income)
-        .SumAsync(t => t.Amount); // soma as entradas
+    var plan = await db.AccountPlans.FindAsync(id);
+    if (plan is null) return Results.NotFound();
 
-    var totalOut = await db.Transactions
-        .Where(t => t.Type == TransactionType.Expense)
-        .SumAsync(t => t.Amount); // soma as despesas
+    plan.Code = input.Code;
+    plan.Name = input.Name;
+    plan.Type = input.Type;
 
-    var balance = totalIn - totalOut; // calcula saldo
+    await db.SaveChangesAsync();
+    return Results.NoContent();
+});
 
-    return Results.Ok(new { totalIn, totalOut, balance }); // retorna o resumo
+app.MapDelete("/api/accountplans/{id:int}", async (int id, AppDbContext db, HttpRequest req) =>
+{
+    if (RequireRole(req, UserRole.Master) is IResult notAllowed) return notAllowed;
+
+    var plan = await db.AccountPlans.FindAsync(id);
+    if (plan is null) return Results.NotFound();
+
+    db.AccountPlans.Remove(plan);
+    await db.SaveChangesAsync();
+    return Results.NoContent();
 });
 
 app.Run(); // inicia o servidor web

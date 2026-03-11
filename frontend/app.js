@@ -5,71 +5,6 @@ function getRoleHeader() {
   return { "X-User-Role": role };
 }
 
-async function loadTransactions() {
-  const res = await fetch(`${apiBase}/api/transactions`, {
-    headers: getRoleHeader(),
-  });
-  const list = document.getElementById("transactions");
-  list.innerHTML = "";
-
-  if (!res.ok) {
-    list.innerHTML = `<li style=\"color:red\">Erro: ${res.status} ${res.statusText}</li>`;
-    return;
-  }
-
-  const data = await res.json();
-  data.forEach((tx) => {
-    const item = document.createElement("li");
-    item.textContent = `${tx.id} | ${tx.date} | ${tx.description} | ${tx.amount} | ${tx.type} | ${tx.category}`;
-    list.appendChild(item);
-  });
-}
-
-async function loadSummary() {
-  const res = await fetch(`${apiBase}/api/summary`, {
-    headers: getRoleHeader(),
-  });
-
-  const output = document.getElementById("summary");
-  if (!res.ok) {
-    output.textContent = `Erro: ${res.status} ${res.statusText}`;
-    return;
-  }
-
-  const data = await res.json();
-  output.textContent = JSON.stringify(data, null, 2);
-}
-
-async function createTransaction(event) {
-  event.preventDefault();
-
-  const payload = {
-    date: document.getElementById("date").value,
-    description: document.getElementById("description").value,
-    amount: Number(document.getElementById("amount").value),
-    type: document.getElementById("type").value,
-    category: document.getElementById("category").value,
-  };
-
-  const res = await fetch(`${apiBase}/api/transactions`, {
-    method: "POST",
-    headers: {
-      ...getRoleHeader(),
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(payload),
-  });
-
-  if (!res.ok) {
-    alert(`Erro: ${res.status} ${res.statusText}`);
-    return;
-  }
-
-  alert("Transação criada com sucesso!");
-  document.getElementById("transactionForm").reset();
-  loadTransactions();
-}
-
 async function loadCompanies() {
   const res = await fetch(`${apiBase}/api/companies`, {
     headers: getRoleHeader(),
@@ -223,6 +158,32 @@ async function createUser(event) {
   loadUsers();
 }
 
+function isMasterRole() {
+  return document.getElementById("role").value === "Master";
+}
+
+function updateUiForRole() {
+  const isMaster = isMasterRole();
+
+  // Apenas Master pode usar o formulário de alteração/criação.
+  document.getElementById("planCode").disabled = !isMaster;
+  document.getElementById("planName").disabled = !isMaster;
+  document.getElementById("planType").disabled = !isMaster;
+  document.querySelector("#accountPlanForm button[type=submit]").disabled = !isMaster;
+
+  // Apenas Master vê o aviso de edição, mas todos podem carregar a lista.
+  document.getElementById("accountPlanWarning").style.display = isMaster ? "none" : "block";
+  document.getElementById("loadAccountPlans").disabled = false;
+}
+
+function createAccountItem(account) {
+  const level = account.code.split(".").length - 1;
+  const li = document.createElement("li");
+  li.style.paddingLeft = `${Math.min(level, 2) * 18}px`;
+  li.textContent = `${account.code} - ${account.name} (${account.type})`;
+  return li;
+}
+
 async function loadAccountPlans() {
   const res = await fetch(`${apiBase}/api/accountplans`, {
     headers: getRoleHeader(),
@@ -237,11 +198,7 @@ async function loadAccountPlans() {
   }
 
   const data = await res.json();
-  data.forEach((item) => {
-    const li = document.createElement("li");
-    li.textContent = `${item.id} | ${item.code} | ${item.name} | ${item.type}`;
-    list.appendChild(li);
-  });
+  data.forEach((item) => list.appendChild(createAccountItem(item)));
 }
 
 async function createAccountPlan(event) {
@@ -272,10 +229,6 @@ async function createAccountPlan(event) {
   loadAccountPlans();
 }
 
-document.getElementById("loadTransactions").addEventListener("click", loadTransactions);
-document.getElementById("loadSummary").addEventListener("click", loadSummary);
-document.getElementById("transactionForm").addEventListener("submit", createTransaction);
-
 document.getElementById("loadCompanies").addEventListener("click", loadCompanies);
 document.getElementById("companyForm").addEventListener("submit", createCompany);
 
@@ -287,3 +240,59 @@ document.getElementById("userForm").addEventListener("submit", createUser);
 
 document.getElementById("loadAccountPlans").addEventListener("click", loadAccountPlans);
 document.getElementById("accountPlanForm").addEventListener("submit", createAccountPlan);
+
+document.getElementById("role").addEventListener("change", () => {
+  updateUiForRole();
+});
+
+function setActiveNav(pageId) {
+  document.querySelectorAll("nav button[data-page]").forEach((btn) => {
+    btn.classList.toggle("active", btn.dataset.page === pageId);
+  });
+}
+
+function showPage(pageId) {
+  document.querySelectorAll(".page").forEach((page) => {
+    page.classList.toggle("active", page.id === `page-${pageId}`);
+  });
+
+  setActiveNav(pageId);
+  dropdown?.classList.remove("open");
+
+  const pageLoaders = {
+    company: loadCompanies,
+    customer: loadCustomers,
+    user: loadUsers,
+    accountplan: loadAccountPlans,
+  };
+
+  const loader = pageLoaders[pageId];
+  if (loader) {
+    loader().catch(() => {});
+  }
+}
+
+const dropdown = document.querySelector(".dropdown");
+const dropdownToggle = document.querySelector(".dropdown-toggle");
+
+dropdownToggle.addEventListener("click", () => {
+  dropdown.classList.toggle("open");
+});
+
+document.addEventListener("click", (event) => {
+  if (!dropdown.contains(event.target)) {
+    dropdown.classList.remove("open");
+  }
+});
+
+// Wire navigation buttons
+document.querySelectorAll("nav [data-page]").forEach((button) => {
+  button.addEventListener("click", () => {
+    showPage(button.dataset.page);
+  });
+});
+
+// Initial page
+showPage("company");
+
+updateUiForRole();

@@ -12,10 +12,6 @@ public class AppDbContext : DbContext
     {
     }
 
-    // Define uma tabela (ou entidade) chamada Transactions no banco.
-    // Cada Transaction aqui vira uma linha na tabela.
-    public DbSet<Transaction> Transactions => Set<Transaction>();
-
     // Tabelas para o menu CADASTRO
     public DbSet<Company> Companies => Set<Company>();
     public DbSet<CustomerSupplier> CustomerSuppliers => Set<CustomerSupplier>();

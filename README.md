@@ -56,6 +56,8 @@ No Swagger, clique em "Try it out" e adicione o header em "Headers".
 
 Criei uma página simples em `frontend/index.html` que usa `frontend/app.js` para chamar a API.
 
+> ✅ O back-end já cria automaticamente um usuário **Master** (login/senha: `master/master`) na primeira vez que roda.
+
 ### Como usar
 
 1) Rode o backend:
@@ -79,4 +81,8 @@ Então acesse:
 
 ### Como testar perfis (roles)
 
-No front, escolha o perfil em “Perfil (X-User-Role)”. Ele envia o header para a API e permite testar Master/Admin/User/Viewer.
+No front, escolha o perfil em “Perfil (X-User-Role)”. Ele envia o header para a API e permite testar:
+- `Master` (acesso total / único que altera plano de contas)
+- `Admin` (cadastra dados de empresa/cliente/usuário)
+- `User` (lança transações e vê relatórios)
+- `Viewer` (consulta apenas)

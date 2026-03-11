@@ -1,0 +1,228 @@
+/* Minimal UI com base em azul escuro com tons de verde e marrom */
+:root {
+  --bg: #071a3d;
+  --card: rgba(255, 255, 255, 0.95);
+  --border: rgba(25, 75, 156, 0.35);
+  --text: #0f1b33;
+  --muted: #c8d2e8;
+  --primary: #0a4d82;
+  --accent: #2bb673;
+  --danger: #d33f49;
+  --warn: #f2b930;
+  --radius: 14px;
+  --shadow: 0 18px 40px rgba(0, 0, 0, 0.18);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+  margin: 0;
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: var(--text);
+  background: linear-gradient(140deg, #071a3d, #0a2a55);
+}
+
+body {
+  display: flex;
+  justify-content: center;
+  padding: 2.5rem 1.5rem;
+}
+
+.container {
+  width: min(1100px, 100%);
+}
+
+nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  justify-content: center;
+  margin: 1rem 0 1.2rem;
+}
+
+nav button {
+  padding: 0.6rem 0.9rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--text);
+  font-weight: 600;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+nav button.active {
+  background: rgba(255, 255, 255, 0.28);
+  border-color: rgba(255, 255, 255, 0.35);
+}
+
+.dropdown {
+  position: relative;
+}
+
+.dropdown-toggle {
+  display: flex;
+  align-items: center;
+}
+
+.dropdown-menu {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  width: max-content;
+  min-width: 180px;
+  gap: 0.4rem;
+  flex-direction: column;
+  padding: 0.5rem;
+  margin-top: 0.45rem;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid rgba(25, 75, 156, 0.35);
+  box-shadow: var(--shadow);
+  z-index: 10;
+}
+
+.dropdown.open .dropdown-menu {
+  display: flex;
+}
+
+.dropdown-menu button {
+  width: 100%;
+  text-align: left;
+  border-radius: 12px;
+  padding: 0.55rem 0.8rem;
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.dropdown-menu button:hover,
+.dropdown-menu button:focus {
+  background: rgba(255, 255, 255, 0.28);
+}
+
+.page {
+  display: none;
+}
+
+.page.active {
+  display: block;
+}
+
+header {
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+h1 {
+  margin: 0;
+  font-size: clamp(1.7rem, 3vw, 2.8rem);
+  letter-spacing: -0.02em;
+}
+
+h2 {
+  font-size: 1.25rem;
+  margin: 0 0 0.75rem;
+}
+
+h3 {
+  margin: 1.4rem 0 0.4rem;
+  font-weight: 600;
+}
+
+.card {
+  background: var(--card);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  padding: 1.2rem 1.4rem;
+  margin-bottom: 1.5rem;
+}
+
+.card + .card {
+  margin-top: 1rem;
+}
+
+label {
+  display: block;
+  font-size: 0.915rem;
+  margin-bottom: 0.4rem;
+  color: var(--muted);
+}
+
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="date"],
+input[type="number"],
+select {
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  border-radius: 10px;
+  border: 1px solid rgba(20, 51, 120, 0.2);
+  background: rgba(255, 255, 255, 0.9);
+  font-size: 0.95rem;
+  margin-top: 0.25rem;
+}
+
+button {
+  cursor: pointer;
+  border: 0;
+  border-radius: 10px;
+  padding: 0.65rem 1.1rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  background: var(--primary);
+  color: white;
+  transition: transform 120ms ease, background 140ms ease;
+}
+
+button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  background: var(--accent);
+}
+
+button + button {
+  margin-left: 0.5rem;
+}
+
+ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+li {
+  padding: 0.55rem 0.65rem;
+  border-radius: 10px;
+  border: 1px solid rgba(16, 32, 80, 0.08);
+  margin-bottom: 0.45rem;
+  background: rgba(255, 255, 255, 0.8);
+  font-size: 0.92rem;
+}
+
+.warning {
+  background: rgba(247, 217, 217, 0.9);
+  border: 1px solid rgba(211, 63, 73, 0.35);
+  border-radius: var(--radius);
+  padding: 0.8rem 1rem;
+  margin-bottom: 1rem;
+  color: #7a1f29;
+}
+
+small {
+  color: var(--muted);
+}
+
+@media (min-width: 880px) {
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+}
