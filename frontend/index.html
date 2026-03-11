@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>Gest-Omei (Front)</title>
+</head>
+<body>
+  <h1>Gest-Omei (Front-End de exemplo)</h1>
+
+  <p>
+    Este front-end consome a API do backend rodando em <code>http://localhost:5000</code>.
+    Ele envia o cabeçalho <code>X-User-Role</code> para simular perfis (Master/Admin/User/Viewer).
+  </p>
+
+  <label>
+    Perfil (X-User-Role):
+    <select id="role">
+      <option value="Master">Master</option>
+      <option value="Admin" selected>Admin</option>
+      <option value="User">User</option>
+      <option value="Viewer">Viewer</option>
+    </select>
+  </label>
+
+  <hr />
+
+  <section>
+    <h2>Lista de Transações</h2>
+    <button id="loadTransactions">Carregar transações</button>
+    <ul id="transactions"></ul>
+  </section>
+
+  <hr />
+
+  <section>
+    <h2>Cadastrar transação</h2>
+    <form id="transactionForm">
+      <label>
+        Data:
+        <input type="date" id="date" required />
+      </label>
+      <br />
+      <label>
+        Descrição:
+        <input type="text" id="description" required />
+      </label>
+      <br />
+      <label>
+        Valor:
+        <input type="number" id="amount" step="0.01" required />
+      </label>
+      <br />
+      <label>
+        Tipo:
+        <select id="type">
+          <option value="Income">Entrada</option>
+          <option value="Expense">Saída</option>
+        </select>
+      </label>
+      <br />
+      <label>
+        Categoria:
+        <input type="text" id="category" />
+      </label>
+      <br />
+      <button type="submit">Salvar</button>
+    </form>
+  </section>
+
+  <hr />
+
+  <section>
+    <h2>Cadastro de Empresa</h2>
+    <button id="loadCompanies">Carregar empresas</button>
+    <ul id="companies"></ul>
+
+    <h3>Nova empresa</h3>
+    <form id="companyForm">
+      <label>
+        Nome:
+        <input type="text" id="companyName" required />
+      </label>
+      <br />
+      <label>
+        CNPJ/CPF:
+        <input type="text" id="companyCnpj" />
+      </label>
+      <br />
+      <label>
+        Endereço:
+        <input type="text" id="companyAddress" />
+      </label>
+      <br />
+      <label>
+        Telefone:
+        <input type="text" id="companyPhone" />
+      </label>
+      <br />
+      <label>
+        E-mail:
+        <input type="email" id="companyEmail" />
+      </label>
+      <br />
+      <button type="submit">Salvar empresa</button>
+    </form>
+  </section>
+
+  <hr />
+
+  <section>
+    <h2>Cadastro Cliente/Fornecedor</h2>
+    <button id="loadCustomers">Carregar clientes/fornecedores</button>
+    <ul id="customers"></ul>
+
+    <h3>Novo cliente/fornecedor</h3>
+    <form id="customerForm">
+      <label>
+        Nome:
+        <input type="text" id="customerName" required />
+      </label>
+      <br />
+      <label>
+        CPF/CNPJ:
+        <input type="text" id="customerDocument" />
+      </label>
+      <br />
+      <label>
+        E-mail:
+        <input type="email" id="customerEmail" />
+      </label>
+      <br />
+      <label>
+        Telefone:
+        <input type="text" id="customerPhone" />
+      </label>
+      <br />
+      <label>
+        É fornecedor?
+        <select id="customerIsSupplier">
+          <option value="false">Não</option>
+          <option value="true">Sim</option>
+        </select>
+      </label>
+      <br />
+      <button type="submit">Salvar cliente/fornecedor</button>
+    </form>
+  </section>
+
+  <hr />
+
+  <section>
+    <h2>Cadastro de Usuário</h2>
+    <button id="loadUsers">Carregar usuários</button>
+    <ul id="users"></ul>
+
+    <h3>Novo usuário</h3>
+    <form id="userForm">
+      <label>
+        Login:
+        <input type="text" id="userUsername" required />
+      </label>
+      <br />
+      <label>
+        Senha:
+        <input type="password" id="userPassword" required />
+      </label>
+      <br />
+      <label>
+        Nome completo:
+        <input type="text" id="userFullName" />
+      </label>
+      <br />
+      <label>
+        E-mail:
+        <input type="email" id="userEmail" />
+      </label>
+      <br />
+      <label>
+        Perfil:
+        <select id="userRole">
+          <option value="Master">Master</option>
+          <option value="Admin">Admin</option>
+          <option value="User">User</option>
+          <option value="Viewer">Viewer</option>
+        </select>
+      </label>
+      <br />
+      <button type="submit">Salvar usuário</button>
+    </form>
+  </section>
+
+  <hr />
+
+  <section>
+    <h2>Cadastro de Plano de Contas</h2>
+    <button id="loadAccountPlans">Carregar plano de contas</button>
+    <ul id="accountPlans"></ul>
+
+    <h3>Novo plano de contas</h3>
+    <form id="accountPlanForm">
+      <label>
+        Código:
+        <input type="text" id="planCode" required />
+      </label>
+      <br />
+      <label>
+        Nome:
+        <input type="text" id="planName" required />
+      </label>
+      <br />
+      <label>
+        Tipo:
+        <select id="planType">
+          <option value="Receita">Receita</option>
+          <option value="Despesa">Despesa</option>
+        </select>
+      </label>
+      <br />
+      <button type="submit">Salvar plano</button>
+    </form>
+  </section>
+
+  <hr />
+
+  <section>
+    <h2>Resumo financeiro</h2>
+    <button id="loadSummary">Carregar resumo</button>
+    <pre id="summary" style="background:#f4f4f4;padding:12px"></pre>
+  </section>
+
+  <script src="app.js"></script>
+</body>
+</html>

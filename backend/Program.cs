@@ -12,6 +12,14 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 builder.Services.AddEndpointsApiExplorer(); // Permite gerar documentação (Swagger)
 builder.Services.AddSwaggerGen(); // Gera a documentação interativa de APIs
 
+// Habilita CORS para permitir que o front-end (HTML/JS) acesse a API.
+// Em um projeto real, ajuste para apenas domínios autorizados.
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("LocalDev", policy =>
+        policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod());
+});
+
 var app = builder.Build(); // Constrói a aplicação com os serviços configurados
 
 // Cria o arquivo do banco de dados SQLite automaticamente na primeira execução.
@@ -20,6 +28,9 @@ using (var scope = app.Services.CreateScope())
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     db.Database.EnsureCreated(); // Cria o banco se não existir
 }
+
+// Permite que o front-end acesse a API via CORS.
+app.UseCors("LocalDev");
 
 // No modo desenvolvimento, habilita o Swagger (página de testes da API)
 if (app.Environment.IsDevelopment())

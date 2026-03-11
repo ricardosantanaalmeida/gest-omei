@@ -50,4 +50,33 @@ No Swagger, clique em "Try it out" e adicione o header em "Headers".
 
 - Adicionar autenticação (login/usuário)
 - Criar rotas para clientes, categorias, relatórios
-- Criar UI com HTML/CSS/JS que consuma a API
+- Criar UI com HTML/JS que consuma a API
+
+## Front-end de exemplo (sem CSS)
+
+Criei uma página simples em `frontend/index.html` que usa `frontend/app.js` para chamar a API.
+
+### Como usar
+
+1) Rode o backend:
+   ```powershell
+   dotnet run --project .\backend\gest-omei.api.csproj
+   ```
+2) Abra em seu navegador:
+   - `file:///<caminho para o projeto>/frontend/index.html`
+
+> Se você abrir o HTML diretamente e não funcionar, rode um servidor local simples com Python ou Node.
+
+### Servidor simples com Python (se tiver Python instalado)
+
+```powershell
+cd frontend
+python -m http.server 8000
+```
+
+Então acesse:
+- `http://localhost:8000`
+
+### Como testar perfis (roles)
+
+No front, escolha o perfil em “Perfil (X-User-Role)”. Ele envia o header para a API e permite testar Master/Admin/User/Viewer.
