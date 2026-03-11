@@ -8,6 +8,17 @@ Sistema de gestão para MEI (controle financeiro) - backend em C# + SQLite (API 
   - `Program.cs` - define endpoints e configura o banco SQLite
   - `Data/AppDbContext.cs` - contexto EF Core
   - `Models/Transaction.cs` - modelo de transação financeira
+  - `Models/Company.cs` - dados da empresa (MEI)
+  - `Models/CustomerSupplier.cs` - clientes e fornecedores
+  - `Models/User.cs` - usuários que podem acessar o sistema
+  - `Models/AccountPlan.cs` - plano de contas (categorias financeiras)
+
+## Endpoints principais (menu CADASTRO)
+
+- `GET /api/companies` / `POST /api/companies`
+- `GET /api/customersuppliers` / `POST /api/customersuppliers`
+- `GET /api/users` / `POST /api/users`
+- `GET /api/accountplans` / `POST /api/accountplans`
 
 ## Como usar (no seu computador)
 
@@ -20,6 +31,20 @@ Sistema de gestão para MEI (controle financeiro) - backend em C# + SQLite (API 
 
 3) A API vai rodar em `https://localhost:5001` (ou `http://localhost:5000`).
    - Swagger UI: `https://localhost:5001/swagger`
+
+### Como testar com perfis (roles)
+
+As rotas esperam um header HTTP chamado `X-User-Role` que define o perfil de quem está acessando.
+Valores possíveis:
+
+- `Master` (acesso total)
+- `Admin` (cadastros e administração)
+- `User` (lançar/editar transações e ver relatórios)
+- `Viewer` (só consulta)
+
+> ⚠️ Por enquanto, isto é apenas um exemplo simples: o sistema confia no valor do header para decidir se você pode usar a rota.
+
+No Swagger, clique em "Try it out" e adicione o header em "Headers".
 
 ## Próximos passos
 
