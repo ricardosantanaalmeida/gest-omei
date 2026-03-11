@@ -1,16 +1,16 @@
 /* Minimal UI com base em azul escuro com tons de verde e marrom */
 :root {
-  --bg: #071a3d;
-  --card: rgba(255, 255, 255, 0.95);
-  --border: rgba(25, 75, 156, 0.35);
-  --text: #0f1b33;
-  --muted: #c8d2e8;
-  --primary: #0a4d82;
-  --accent: #2bb673;
-  --danger: #d33f49;
-  --warn: #f2b930;
+  --bg: #050c24;
+  --card: rgba(255, 255, 255, 0.12);
+  --border: rgba(255, 255, 255, 0.18);
+  --text: #eef4ff;
+  --muted: rgba(238, 244, 255, 0.75);
+  --primary: #2bb673;
+  --accent: #64d7a0;
+  --danger: #ff5a5f;
+  --warn: #ffd166;
   --radius: 14px;
-  --shadow: 0 18px 40px rgba(0, 0, 0, 0.18);
+  --shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
 }
 
 * {
@@ -22,84 +22,111 @@ html, body {
   margin: 0;
   font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   color: var(--text);
-  background: linear-gradient(140deg, #071a3d, #0a2a55);
+  background: linear-gradient(135deg, var(--bg), #06183a);
 }
 
 body {
-  display: flex;
-  justify-content: center;
-  padding: 2.5rem 1.5rem;
+  min-height: 100vh;
+  margin: 0;
 }
 
-.container {
-  width: min(1100px, 100%);
+.layout {
+  display: flex;
+  min-height: 100vh;
+  width: min(1200px, 100%);
+  margin: 0 auto;
+  padding: 1.5rem;
+  gap: 1.5rem;
+}
+
+.sidebar {
+  width: 280px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.3rem;
+  border-radius: var(--radius);
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(12px);
+  max-height: calc(100vh - 3rem);
+  overflow-y: auto;
+}
+
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
 }
 
 nav {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
-  justify-content: center;
-  margin: 1rem 0 1.2rem;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 0;
+}
+
+.nav-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.nav-group-toggle {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.65rem 1rem;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: var(--text);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.nav-group-toggle::after {
+  content: "▾";
+  margin-left: 0.6rem;
+  transition: transform 160ms ease;
+}
+
+.nav-group.open .nav-group-toggle::after {
+  transform: rotate(-180deg);
+}
+
+.nav-group-items {
+  display: none;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding-left: 0.5rem;
+}
+
+.nav-group-items.open {
+  display: flex;
 }
 
 nav button {
-  padding: 0.6rem 0.9rem;
-  border-radius: 999px;
+  padding: 0.7rem 1rem;
+  border-radius: 12px;
   background: rgba(255, 255, 255, 0.12);
   color: var(--text);
   font-weight: 600;
   border: 1px solid rgba(255, 255, 255, 0.18);
+  text-align: left;
 }
 
 nav button.active {
-  background: rgba(255, 255, 255, 0.28);
+  background: rgba(255, 255, 255, 0.22);
   border-color: rgba(255, 255, 255, 0.35);
 }
 
-.dropdown {
-  position: relative;
+nav button:hover {
+  background: rgba(255, 255, 255, 0.18);
 }
 
-.dropdown-toggle {
-  display: flex;
-  align-items: center;
-}
-
-.dropdown-menu {
-  display: none;
-  position: absolute;
-  top: 100%;
-  left: 0;
-  width: max-content;
-  min-width: 180px;
-  gap: 0.4rem;
-  flex-direction: column;
-  padding: 0.5rem;
-  margin-top: 0.45rem;
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.95);
-  border: 1px solid rgba(25, 75, 156, 0.35);
-  box-shadow: var(--shadow);
-  z-index: 10;
-}
-
-.dropdown.open .dropdown-menu {
-  display: flex;
-}
-
-.dropdown-menu button {
-  width: 100%;
-  text-align: left;
-  border-radius: 12px;
-  padding: 0.55rem 0.8rem;
-  background: rgba(255, 255, 255, 0.16);
-}
-
-.dropdown-menu button:hover,
-.dropdown-menu button:focus {
-  background: rgba(255, 255, 255, 0.28);
-}
 
 .page {
   display: none;
@@ -110,18 +137,20 @@ nav button.active {
 }
 
 header {
-  text-align: center;
-  margin-bottom: 1.5rem;
+  text-align: left;
+  margin: 0;
+  padding-bottom: 0.25rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.16);
 }
 
 h1 {
   margin: 0;
-  font-size: clamp(1.7rem, 3vw, 2.8rem);
+  font-size: 1.7rem;
   letter-spacing: -0.02em;
 }
 
 h2 {
-  font-size: 1.25rem;
+  font-size: 1.3rem;
   margin: 0 0 0.75rem;
 }
 
@@ -147,7 +176,7 @@ label {
   display: block;
   font-size: 0.915rem;
   margin-bottom: 0.4rem;
-  color: var(--muted);
+  color: rgba(238, 244, 255, 0.85);
 }
 
 input[type="text"],

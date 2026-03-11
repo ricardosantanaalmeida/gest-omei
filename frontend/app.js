@@ -1,10 +1,13 @@
+// Base URL da API (backend). Atualize se a porta/host mudar.
 const apiBase = "http://localhost:5000";
 
+// Cria o cabeçalho X-User-Role usado para simular perfis de usuário.
 function getRoleHeader() {
   const role = document.getElementById("role").value;
   return { "X-User-Role": role };
 }
 
+// Carrega a lista de empresas do backend e atualiza a tela.
 async function loadCompanies() {
   const res = await fetch(`${apiBase}/api/companies`, {
     headers: getRoleHeader(),
@@ -21,13 +24,32 @@ async function loadCompanies() {
   const data = await res.json();
   data.forEach((item) => {
     const li = document.createElement("li");
-    li.textContent = `${item.id} | ${item.name} | ${item.cnpj} | ${item.email}`;
+    const tipoAtividade = item.tipoAtividade ? ` | Tipo: ${item.tipoAtividade}` : "";
+    li.textContent = `${item.id} | ${item.name} | ${item.cnpj}${tipoAtividade}`;
     list.appendChild(li);
+  });
+}
+
+// Cria uma nova empresa enviando os dados para a API.
+// Lê um arquivo e converte para Base64.
+function readFileAsBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result?.toString() ?? "");
+    reader.onerror = (err) => reject(err);
+    reader.readAsDataURL(file);
   });
 }
 
 async function createCompany(event) {
   event.preventDefault();
+
+  const atividadeTipos = Array.from(document.querySelectorAll("input[name='companyTipoAtividade']:checked"))
+    .map((el) => el.value)
+    .join(",");
+
+  const logoFile = document.getElementById("companyLogo").files?.[0];
+  const logoBase64 = logoFile ? await readFileAsBase64(logoFile) : "";
 
   const payload = {
     name: document.getElementById("companyName").value,
@@ -35,6 +57,14 @@ async function createCompany(event) {
     address: document.getElementById("companyAddress").value,
     phone: document.getElementById("companyPhone").value,
     email: document.getElementById("companyEmail").value,
+    inscricaoEstadual: document.getElementById("companyInscricaoEstadual").value,
+    inscricaoMunicipal: document.getElementById("companyInscricaoMunicipal").value,
+    responsavel: document.getElementById("companyResponsavel").value,
+    dataAbertura: document.getElementById("companyDataAbertura").value,
+    atividadePrimaria: document.getElementById("companyAtividadePrimaria").value,
+    atividadesSecundarias: document.getElementById("companyAtividadesSecundarias").value,
+    tipoAtividade: atividadeTipos,
+    logoBase64,
   };
 
   const res = await fetch(`${apiBase}/api/companies`, {
@@ -56,6 +86,7 @@ async function createCompany(event) {
   loadCompanies();
 }
 
+// Carrega a lista de clientes/fornecedores do backend.
 async function loadCustomers() {
   const res = await fetch(`${apiBase}/api/customersuppliers`, {
     headers: getRoleHeader(),
@@ -77,6 +108,7 @@ async function loadCustomers() {
   });
 }
 
+// Cria um novo cliente/fornecedor via API.
 async function createCustomer(event) {
   event.preventDefault();
 
@@ -107,6 +139,7 @@ async function createCustomer(event) {
   loadCustomers();
 }
 
+// Carrega a lista de usuários do backend.
 async function loadUsers() {
   const res = await fetch(`${apiBase}/api/users`, {
     headers: getRoleHeader(),
@@ -128,6 +161,7 @@ async function loadUsers() {
   });
 }
 
+// Cria um novo usuário via API.
 async function createUser(event) {
   event.preventDefault();
 
@@ -158,10 +192,13 @@ async function createUser(event) {
   loadUsers();
 }
 
+// Verifica se o perfil selecionado é Master.
 function isMasterRole() {
   return document.getElementById("role").value === "Master";
 }
 
+// Atualiza o estado da UI baseado no perfil selecionado.
+// Usuários sem privilégio Master não podem criar/editar plano de contas.
 function updateUiForRole() {
   const isMaster = isMasterRole();
 
@@ -176,6 +213,7 @@ function updateUiForRole() {
   document.getElementById("loadAccountPlans").disabled = false;
 }
 
+// Cria um item (linha) na lista de plano de contas, com recuo para níveis.
 function createAccountItem(account) {
   const level = account.code.split(".").length - 1;
   const li = document.createElement("li");
@@ -184,6 +222,7 @@ function createAccountItem(account) {
   return li;
 }
 
+// Carrega o plano de contas via API e insere na lista.
 async function loadAccountPlans() {
   const res = await fetch(`${apiBase}/api/accountplans`, {
     headers: getRoleHeader(),
@@ -201,6 +240,7 @@ async function loadAccountPlans() {
   data.forEach((item) => list.appendChild(createAccountItem(item)));
 }
 
+// Cria um novo plano de contas via API.
 async function createAccountPlan(event) {
   event.preventDefault();
 
@@ -257,7 +297,7 @@ function showPage(pageId) {
   });
 
   setActiveNav(pageId);
-  dropdown?.classList.remove("open");
+  toggleGroup("cadastro", pageId);
 
   const pageLoaders = {
     company: loadCompanies,
@@ -272,27 +312,40 @@ function showPage(pageId) {
   }
 }
 
-const dropdown = document.querySelector(".dropdown");
-const dropdownToggle = document.querySelector(".dropdown-toggle");
+function toggleGroup(groupName, pageId) {
+  const groupItems = document.querySelector(`.nav-group-items[data-group="${groupName}"]`);
+  const group = groupItems?.closest(".nav-group");
+  if (!group || !groupItems) return;
 
-dropdownToggle.addEventListener("click", () => {
-  dropdown.classList.toggle("open");
-});
+  const shouldOpen = ["company", "user", "accountplan", "customer"].includes(pageId);
+  groupItems.classList.toggle("open", shouldOpen);
+  group.classList.toggle("open", shouldOpen);
+}
 
-document.addEventListener("click", (event) => {
-  if (!dropdown.contains(event.target)) {
-    dropdown.classList.remove("open");
-  }
-});
-
-// Wire navigation buttons
+// Conecta os botões do menu com a navegação de páginas.
 document.querySelectorAll("nav [data-page]").forEach((button) => {
   button.addEventListener("click", () => {
     showPage(button.dataset.page);
   });
 });
 
-// Initial page
+// Conecta o botão do grupo (Cadastro) para abrir/fechar o submenu.
+const groupToggles = document.querySelectorAll(".nav-group-toggle");
+groupToggles.forEach((toggle) => {
+  toggle.addEventListener("click", () => {
+    const groupName = toggle.dataset.group;
+    const groupItems = document.querySelector(`.nav-group-items[data-group="${groupName}"]`);
+    const group = toggle.closest(".nav-group");
+
+    if (!groupItems || !group) return;
+
+    const isOpen = groupItems.classList.toggle("open");
+    group.classList.toggle("open", isOpen);
+  });
+});
+
+// Define a página inicial que sempre será mostrada ao carregar.
 showPage("company");
 
+// Ajusta o estado da interface conforme o perfil selecionado.
 updateUiForRole();

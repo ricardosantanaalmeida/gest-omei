@@ -7,40 +7,42 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <div class="container">
-    <header>
-      <h1>Gest-Omei</h1>
-      <p>Exemplo de UI minimalista consumindo a API de gestão financeira.</p>
-    </header>
+  <div class="layout">
+    <aside class="sidebar">
+      <header>
+        <h1>Gest-Omei</h1>
+        <p>Gestão MEI - cadastros e planos de contas.</p>
+      </header>
 
-  <div class="card">
-    <p>
-      Este front-end consome a API do backend rodando em <code>http://localhost:5000</code>.
-      Ele envia o cabeçalho <code>X-User-Role</code> para simular perfis (Master/Admin/User/Viewer).
-    </p>
-
-    <label>
-      Perfil (X-User-Role):
-      <select id="role">
-        <option value="Master">Master</option>
-        <option value="Admin" selected>Admin</option>
-        <option value="User">User</option>
-        <option value="Viewer">Viewer</option>
-      </select>
-    </label>
-  </div>
-
-  <nav class="main-nav">
-    <div class="dropdown">
-      <button type="button" class="dropdown-toggle">Cadastro ▾</button>
-      <div class="dropdown-menu" role="menu">
-        <button type="button" data-page="company">Empresa</button>
-        <button type="button" data-page="customer">Cliente/Fornecedor</button>
-        <button type="button" data-page="user">Usuário</button>
-        <button type="button" data-page="accountplan">Plano de Contas</button>
+      <div class="card card--small">
+        <label>
+          Perfil (X-User-Role):
+          <select id="role">
+            <option value="Master">Master</option>
+            <option value="Admin" selected>Admin</option>
+            <option value="User">User</option>
+            <option value="Viewer">Viewer</option>
+          </select>
+        </label>
       </div>
-    </div>
-  </nav>
+
+      <nav class="main-nav">
+        <div class="nav-group">
+          <button type="button" class="nav-group-toggle" data-group="cadastro">Cadastro ▾</button>
+          <div class="nav-group-items" data-group="cadastro">
+            <button type="button" data-page="company">Empresa</button>
+            <button type="button" data-page="user">Usuário</button>
+            <button type="button" data-page="accountplan">Plano de Contas</button>
+            <button type="button" data-page="customer">Cliente/Fornecedor</button>
+          </div>
+        </div>
+        <button type="button" data-page="movimento">Movimento</button>
+        <button type="button" data-page="relatorio">Relatório</button>
+        <button type="button" data-page="ajuda">Ajuda</button>
+      </nav>
+    </aside>
+
+    <main class="main">
 
 
   <section id="page-company" class="page">
@@ -73,6 +75,40 @@
       <label>
         E-mail:
         <input type="email" id="companyEmail" />
+      </label>
+      <label>
+        Inscrição Estadual:
+        <input type="text" id="companyInscricaoEstadual" />
+      </label>
+      <label>
+        Inscrição Municipal:
+        <input type="text" id="companyInscricaoMunicipal" />
+      </label>
+      <label>
+        Responsável:
+        <input type="text" id="companyResponsavel" />
+      </label>
+      <label>
+        Data de abertura:
+        <input type="date" id="companyDataAbertura" />
+      </label>
+      <label>
+        Atividade primária:
+        <input type="text" id="companyAtividadePrimaria" />
+      </label>
+      <label>
+        Atividades secundárias:
+        <input type="text" id="companyAtividadesSecundarias" placeholder="Separe por vírgula" />
+      </label>
+      <fieldset style="border:1px solid rgba(255,255,255,0.18); padding:0.8rem; border-radius:12px;">
+        <legend>Tipo de atividade</legend>
+        <label><input type="checkbox" name="companyTipoAtividade" value="Servico" /> Prestadora de serviço</label>
+        <label><input type="checkbox" name="companyTipoAtividade" value="Comercio" /> Comércio</label>
+        <label><input type="checkbox" name="companyTipoAtividade" value="Industria" /> Indústria</label>
+      </fieldset>
+      <label>
+        Logo (PNG/JPG):
+        <input type="file" id="companyLogo" accept="image/png,image/jpeg" />
       </label>
       <button type="submit">Salvar empresa</button>
     </form>
@@ -194,6 +230,31 @@
     </form>
     </div>
   </section>
+
+  <section id="page-movimento" class="page">
+    <div class="card">
+      <h2>Movimento</h2>
+      <p>Em desenvolvimento.</p>
+    </div>
+  </section>
+
+  <section id="page-relatorio" class="page">
+    <div class="card">
+      <h2>Relatório</h2>
+      <p>Em desenvolvimento.</p>
+    </div>
+  </section>
+
+  <section id="page-ajuda" class="page">
+    <div class="card">
+      <h2>Ajuda</h2>
+      <p>Use o menu à esquerda para navegar entre os cadastros.</p>
+      <p>O recurso de movimento e relatório será implementado em breve.</p>
+    </div>
+  </section>
+
+    </main>
+  </div>
 
   <script src="app.js"></script>
 </body>
