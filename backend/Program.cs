@@ -63,14 +63,42 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-// Em ambiente de desenvolvimento / teste, removemos a restrição de perfil
-// para simplificar o uso; todas as rotas ficam acessíveis sem verificar X-User-Role.
+// Helper simples para verificar o perfil do usuário via header HTTP "X-User-Role".
+// Exemplo de header: X-User-Role: Admin
+static UserRole? GetUserRole(HttpRequest request)
+{
+    if (!request.Headers.TryGetValue("X-User-Role", out var values))
+        return null;
+
+    var roleString = values.ToString();
+    return Enum.TryParse<UserRole>(roleString, true, out var role) ? role : null;
+}
+
 static IResult? RequireRole(HttpRequest request, params UserRole[] allowedRoles)
 {
-    return null;
+    var role = GetUserRole(request);
+    if (role is null) return Results.Unauthorized();
+    return allowedRoles.Contains(role.Value) ? null : Results.Forbid();
 }
 
 // ---------- ROTAS DE CADASTRO (MENU CADASTRO) ----------
+
+// Retorna informações sobre o perfil atual (X-User-Role) e permissões.
+app.MapGet("/api/me", (HttpRequest req) =>
+{
+    var role = GetUserRole(req);
+    if (role is null) return Results.Unauthorized();
+
+    return Results.Ok(new
+    {
+        role = role.ToString(),
+        canManageCompanies = role == UserRole.Master || role == UserRole.Admin,
+        canManageCustomers = role == UserRole.Master || role == UserRole.Admin,
+        canManageUsers = role == UserRole.Master || role == UserRole.Admin,
+        canManageAccountPlans = role == UserRole.Master,
+        canView = true
+    });
+});
 
 // Empresa (somente Master/Admin)
 app.MapGet("/api/companies", async (AppDbContext db, HttpRequest req) =>

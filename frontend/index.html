@@ -12,8 +12,15 @@
       <header>
         <h1>Gest-Omei</h1>
         <p>Gestão MEI - cadastros e planos de contas.</p>
-      </header>
-
+      <label style="margin-top:0.6rem; display:flex; flex-direction:column; gap:0.3rem; font-weight:600;">
+        Perfil de acesso:
+        <select id="role">
+          <option value="Master">Master</option>
+          <option value="Admin">Admin</option>
+          <option value="User">User</option>
+          <option value="Viewer">Viewer</option>
+        </select>
+      </label>
 
       <nav class="main-nav">
         <div class="nav-group">
@@ -32,7 +39,7 @@
     </aside>
 
     <main class="main">
-
+      <div id="roleInfo" class="message" style="display:none"></div>
 
   <section id="page-company" class="page">
     <div class="card">

@@ -1,10 +1,45 @@
 // Base URL da API (backend). Atualize se a porta/host mudar.
 const apiBase = "http://localhost:5000";
 
-// Cria o cabeçalho X-User-Role fixo (Master) para simplificar o uso.
-// Se você quiser implementar login de verdade, este código deverá ser modificado.
+// Retorna o papel selecionado no frontend (X-User-Role).
+function getSelectedRole() {
+  return document.getElementById("role")?.value ?? "Master";
+}
+
 function getRoleHeader() {
-  return { "X-User-Role": "Master" };
+  return { "X-User-Role": getSelectedRole() };
+}
+
+async function updateRoleInfo() {
+  const role = getSelectedRole();
+  const info = document.getElementById("roleInfo");
+
+  const descriptions = {
+    Master: "Master: pode criar/editar/excluir todos os cadastros e planos.",
+    Admin: "Admin: pode criar/editar cadastros, mas não altera o plano de contas.",
+    User: "User: pode visualizar cadastros, mas não criar nem editar.",
+    Viewer: "Viewer: somente visualização de cadastros.",
+  };
+
+  info.textContent = descriptions[role] ?? "Perfil desconhecido.";
+  info.style.display = "block";
+
+  // Chama a API para confirmar o perfil reconhecido pelo backend
+  // e exibir as permissões reais (útil para depuração).
+  try {
+    const res = await fetch(`${apiBase}/api/me`, {
+      headers: getRoleHeader(),
+    });
+
+    if (!res.ok) {
+      return;
+    }
+
+    const data = await res.json();
+    info.textContent += ` (API reconhece: ${data.role})`;
+  } catch (err) {
+    // Silencioso: problema de conexão não bloqueia a UI.
+  }
 }
 
 // Carrega a lista de empresas do backend e atualiza a tela.
@@ -285,24 +320,69 @@ async function createUser(event) {
   loadUsers();
 }
 
-// Como o perfil não é mais selecionável, sempre tratamos como Master.
-function isMasterRole() {
-  return true;
+function getSelectedRole() {
+  return document.getElementById("role")?.value ?? "Master";
 }
 
-// Atualiza o estado da UI baseado em Master (sempre habilitado).
+function isMasterRole() {
+  return getSelectedRole() === "Master";
+}
+
+function isAdminRole() {
+  return getSelectedRole() === "Admin";
+}
+
+function canEditCompanies() {
+  return isMasterRole() || isAdminRole();
+}
+
+function canEditUsers() {
+  return isMasterRole() || isAdminRole();
+}
+
+function canEditAccountPlans() {
+  return isMasterRole();
+}
+
+// Atualiza o estado da UI conforme o perfil selecionado.
 function updateUiForRole() {
-  const isMaster = isMasterRole();
+  const canEditPlans = canEditAccountPlans();
+  const canEditUsersFlag = canEditUsers();
+  const canEditCompaniesFlag = canEditCompanies();
 
-  // Apenas Master pode usar o formulário de alteração/criação.
-  document.getElementById("planCode").disabled = !isMaster;
-  document.getElementById("planName").disabled = !isMaster;
-  document.getElementById("planType").disabled = !isMaster;
-  document.querySelector("#accountPlanForm button[type=submit]").disabled = !isMaster;
+  // Plano de contas (Master apenas)
+  document.getElementById("planCode").disabled = !canEditPlans;
+  document.getElementById("planName").disabled = !canEditPlans;
+  document.getElementById("planType").disabled = !canEditPlans;
+  document.querySelector("#accountPlanForm button[type=submit]").disabled = !canEditPlans;
+  document.getElementById("accountPlanWarning").style.display = canEditPlans ? "none" : "block";
 
-  // Apenas Master vê o aviso de edição, mas todos podem carregar a lista.
-  document.getElementById("accountPlanWarning").style.display = isMaster ? "none" : "block";
-  document.getElementById("loadAccountPlans").disabled = false;
+  // Usuário
+  document.getElementById("userUsername").disabled = !canEditUsersFlag;
+  document.getElementById("userPassword").disabled = !canEditUsersFlag;
+  document.getElementById("userFullName").disabled = !canEditUsersFlag;
+  document.getElementById("userEmail").disabled = !canEditUsersFlag;
+  document.getElementById("userRole").disabled = !canEditUsersFlag;
+  document.querySelector("#userForm button[type=submit]").disabled = !canEditUsersFlag;
+
+  // Empresas
+  document.getElementById("companyName").disabled = !canEditCompaniesFlag;
+  document.getElementById("companyCnpj").disabled = !canEditCompaniesFlag;
+  document.getElementById("companyAddress").disabled = !canEditCompaniesFlag;
+  document.getElementById("companyPhone").disabled = !canEditCompaniesFlag;
+  document.getElementById("companyEmail").disabled = !canEditCompaniesFlag;
+  document.getElementById("companyInscricaoEstadual").disabled = !canEditCompaniesFlag;
+  document.getElementById("companyInscricaoMunicipal").disabled = !canEditCompaniesFlag;
+  document.getElementById("companyResponsavel").disabled = !canEditCompaniesFlag;
+  document.getElementById("companyDataAbertura").disabled = !canEditCompaniesFlag;
+  document.getElementById("companyAtividadePrimaria").disabled = !canEditCompaniesFlag;
+  document.getElementById("companyAtividadesSecundarias").disabled = !canEditCompaniesFlag;
+  document.querySelectorAll("input[name='companyTipoAtividade']").forEach((el) => (el.disabled = !canEditCompaniesFlag));
+  document.getElementById("companyLogo").disabled = !canEditCompaniesFlag;
+  document.querySelector("#companyForm button[type=submit]").disabled = !canEditCompaniesFlag;
+
+  // Atualiza mensagem de perfil (informação adicional)
+  updateRoleInfo().catch(() => {});
 }
 
 // Cria um item (linha) na lista de plano de contas, com recuo para níveis.
@@ -415,6 +495,12 @@ document.querySelectorAll("nav [data-page]").forEach((button) => {
   button.addEventListener("click", () => {
     showPage(button.dataset.page);
   });
+});
+
+// Conecta o seletor de perfil para ajustar permissões em tempo real.
+document.getElementById("role").addEventListener("change", () => {
+  updateUiForRole();
+  showPage(document.querySelector("nav button.active")?.dataset.page || "company");
 });
 
 // Conecta o botão do grupo (Cadastro) para abrir/fechar o submenu.
