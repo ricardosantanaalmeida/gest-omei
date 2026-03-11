@@ -19,4 +19,7 @@ public class Company
     public string AtividadesSecundarias { get; set; } = string.Empty; // Pode ser lista separada por vírgulas
     public string TipoAtividade { get; set; } = string.Empty; // "Servico,Comercio,Industria"
     public string LogoBase64 { get; set; } = string.Empty; // Armazena logo em Base64 (PNG/JPG)
+
+    // Se false, a empresa está inativa (ex: cancelamento ou falta de pagamento)
+    public bool IsActive { get; set; } = true;
 }

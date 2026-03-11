@@ -1,10 +1,74 @@
 // Base URL da API (backend). Atualize se a porta/host mudar.
 const apiBase = "http://localhost:5000";
 
-// Cria o cabeçalho X-User-Role usado para simular perfis de usuário.
+// Cria o cabeçalho X-User-Role fixo (Master) para simplificar o uso.
+// Se você quiser implementar login de verdade, este código deverá ser modificado.
 function getRoleHeader() {
-  const role = document.getElementById("role").value;
-  return { "X-User-Role": role };
+  return { "X-User-Role": "Master" };
+}
+
+// Carrega a lista de empresas do backend e atualiza a tela.
+async function changeCompanyActiveState(companyId, activate) {
+  const url = `${apiBase}/api/companies/${companyId}/${activate ? "activate" : "inactivate"}`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: {
+      ...getRoleHeader(),
+      "Content-Type": "application/json",
+    },
+  });
+
+  if (!res.ok) {
+    alert(`Erro ao ${activate ? "reativar" : "inativar"}: ${res.status} ${res.statusText}`);
+    return;
+  }
+
+  loadCompanies();
+}
+
+async function createCompany(event) {
+  event.preventDefault();
+
+  const atividadeTipos = Array.from(document.querySelectorAll("input[name='companyTipoAtividade']:checked"))
+    .map((el) => el.value)
+    .join(",");
+
+  const logoFile = document.getElementById("companyLogo").files?.[0];
+  const logoBase64 = logoFile ? await readFileAsBase64(logoFile) : "";
+
+  const payload = {
+    name: document.getElementById("companyName").value,
+    cnpj: document.getElementById("companyCnpj").value,
+    address: document.getElementById("companyAddress").value,
+    phone: document.getElementById("companyPhone").value,
+    email: document.getElementById("companyEmail").value,
+    inscricaoEstadual: document.getElementById("companyInscricaoEstadual").value,
+    inscricaoMunicipal: document.getElementById("companyInscricaoMunicipal").value,
+    responsavel: document.getElementById("companyResponsavel").value,
+    dataAbertura: document.getElementById("companyDataAbertura").value,
+    atividadePrimaria: document.getElementById("companyAtividadePrimaria").value,
+    atividadesSecundarias: document.getElementById("companyAtividadesSecundarias").value,
+    tipoAtividade: atividadeTipos,
+    logoBase64,
+  };
+
+  const res = await fetch(`${apiBase}/api/companies`, {
+    method: "POST",
+    headers: {
+      ...getRoleHeader(),
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!res.ok) {
+    alert(`Erro: ${res.status} ${res.statusText}`);
+    return;
+  }
+
+  showMessage("companyMessage", "Cadastro salvo com sucesso!");
+  document.getElementById("companyForm").reset();
+  loadCompanies();
 }
 
 // Carrega a lista de empresas do backend e atualiza a tela.
@@ -25,9 +89,38 @@ async function loadCompanies() {
   data.forEach((item) => {
     const li = document.createElement("li");
     const tipoAtividade = item.tipoAtividade ? ` | Tipo: ${item.tipoAtividade}` : "";
-    li.textContent = `${item.id} | ${item.name} | ${item.cnpj}${tipoAtividade}`;
+    const status = item.isActive ? "Ativa" : "Inativa";
+    li.textContent = `${item.id} | ${item.name} | ${item.cnpj} | ${status}${tipoAtividade}`;
+
+    if (isMasterRole()) {
+      const btn = document.createElement("button");
+      btn.style.marginLeft = "0.5rem";
+
+      if (item.isActive) {
+        btn.textContent = "Inativar";
+        btn.addEventListener("click", () => changeCompanyActiveState(item.id, false));
+      } else {
+        btn.textContent = "Reativar";
+        btn.addEventListener("click", () => changeCompanyActiveState(item.id, true));
+      }
+
+      li.appendChild(btn);
+    }
+
     list.appendChild(li);
   });
+}
+
+// Exibe uma mensagem temporária no front para o usuário.
+function showMessage(elementId, text) {
+  const el = document.getElementById(elementId);
+  if (!el) return;
+  el.textContent = text;
+  el.style.display = "block";
+
+  setTimeout(() => {
+    el.style.display = "none";
+  }, 3500);
 }
 
 // Cria uma nova empresa enviando os dados para a API.
@@ -134,7 +227,7 @@ async function createCustomer(event) {
     return;
   }
 
-  alert("Cliente/fornecedor criado com sucesso!");
+  showMessage("customerMessage", "Cadastro salvo com sucesso!");
   document.getElementById("customerForm").reset();
   loadCustomers();
 }
@@ -187,18 +280,17 @@ async function createUser(event) {
     return;
   }
 
-  alert("Usuário criado com sucesso!");
+  showMessage("userMessage", "Cadastro salvo com sucesso!");
   document.getElementById("userForm").reset();
   loadUsers();
 }
 
-// Verifica se o perfil selecionado é Master.
+// Como o perfil não é mais selecionável, sempre tratamos como Master.
 function isMasterRole() {
-  return document.getElementById("role").value === "Master";
+  return true;
 }
 
-// Atualiza o estado da UI baseado no perfil selecionado.
-// Usuários sem privilégio Master não podem criar/editar plano de contas.
+// Atualiza o estado da UI baseado em Master (sempre habilitado).
 function updateUiForRole() {
   const isMaster = isMasterRole();
 
@@ -264,7 +356,7 @@ async function createAccountPlan(event) {
     return;
   }
 
-  alert("Plano de contas criado com sucesso!");
+  showMessage("accountPlanMessage", "Cadastro salvo com sucesso!");
   document.getElementById("accountPlanForm").reset();
   loadAccountPlans();
 }
@@ -280,10 +372,6 @@ document.getElementById("userForm").addEventListener("submit", createUser);
 
 document.getElementById("loadAccountPlans").addEventListener("click", loadAccountPlans);
 document.getElementById("accountPlanForm").addEventListener("submit", createAccountPlan);
-
-document.getElementById("role").addEventListener("change", () => {
-  updateUiForRole();
-});
 
 function setActiveNav(pageId) {
   document.querySelectorAll("nav button[data-page]").forEach((btn) => {

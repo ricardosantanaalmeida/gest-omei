@@ -14,17 +14,6 @@
         <p>Gestão MEI - cadastros e planos de contas.</p>
       </header>
 
-      <div class="card card--small">
-        <label>
-          Perfil (X-User-Role):
-          <select id="role">
-            <option value="Master">Master</option>
-            <option value="Admin" selected>Admin</option>
-            <option value="User">User</option>
-            <option value="Viewer">Viewer</option>
-          </select>
-        </label>
-      </div>
 
       <nav class="main-nav">
         <div class="nav-group">
@@ -56,6 +45,7 @@
 
     <h3>Nova empresa</h3>
     <form id="companyForm">
+      <div id="companyMessage" class="message" style="display:none"></div>
       <label>
         Nome:
         <input type="text" id="companyName" required />
@@ -126,6 +116,7 @@
 
     <h3>Novo cliente/fornecedor</h3>
     <form id="customerForm">
+      <div id="customerMessage" class="message" style="display:none"></div>
       <label>
         Nome:
         <input type="text" id="customerName" required />
@@ -165,6 +156,7 @@
 
     <h3>Novo usuário</h3>
     <form id="userForm">
+      <div id="userMessage" class="message" style="display:none"></div>
       <label>
         Login:
         <input type="text" id="userUsername" required />
@@ -209,6 +201,7 @@
       Apenas usuário <strong>Master</strong> pode criar/editar/excluir planos de contas.
     </div>
     <form id="accountPlanForm">
+      <div id="accountPlanMessage" class="message" style="display:none"></div>
       <p>Use códigos como <code>1</code>, <code>1.1</code> ou <code>2.1</code> (até 2 níveis).</p>
 
       <label>
