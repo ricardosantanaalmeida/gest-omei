@@ -4,10 +4,23 @@ using Microsoft.EntityFrameworkCore; // Para configurar o EF Core e o SQLite
 
 var builder = WebApplication.CreateBuilder(args); // Cria o construtor da aplicação (configuração + serviços)
 
-// Registra o contexto do banco (AppDbContext) usando SQLite.
-// Se a conexão não estiver configurada, usa o arquivo local gestomei.db.
+// Registra o contexto do banco (AppDbContext).
+// Por padrão usa MySQL (configurado em appsettings.json), mas cai em SQLite caso não exista conexão.
+var defaultConn = builder.Configuration.GetConnectionString("DefaultConnection");
+
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection") ?? "Data Source=gestomei.db"));
+{
+    if (!string.IsNullOrEmpty(defaultConn) && defaultConn.Contains("server=", StringComparison.OrdinalIgnoreCase))
+    {
+        // MySQL
+        options.UseMySql(defaultConn, ServerVersion.AutoDetect(defaultConn));
+    }
+    else
+    {
+        // SQLite como fallback (local)
+        options.UseSqlite(defaultConn ?? "Data Source=gestomei.db");
+    }
+});
 
 builder.Services.AddEndpointsApiExplorer(); // Permite gerar documentação (Swagger)
 builder.Services.AddSwaggerGen(); // Gera a documentação interativa de APIs
