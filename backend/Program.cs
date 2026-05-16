@@ -1,134 +1,126 @@
-using GestOmei.Api.Data; // Usa o contexto do banco (AppDbContext)
-using GestOmei.Api.Models; // Usa o modelo Transaction e TransactionType
-using Microsoft.EntityFrameworkCore; // Para configurar o EF Core e o SQLite
+using GestOmei.Api.Data;
+using GestOmei.Api.Models;
+using Microsoft.EntityFrameworkCore;
 
-var builder = WebApplication.CreateBuilder(args); // Cria o construtor da aplicação (configuração + serviços)
+var builder = WebApplication.CreateBuilder(args);
 
-// Registra o contexto do banco (AppDbContext).
-// Por padrão usa MySQL (configurado em appsettings.json), mas cai em SQLite caso não exista conexão.
 var defaultConn = builder.Configuration.GetConnectionString("DefaultConnection");
 
 builder.Services.AddDbContext<AppDbContext>(options =>
 {
     if (!string.IsNullOrEmpty(defaultConn) && defaultConn.Contains("server=", StringComparison.OrdinalIgnoreCase))
-    {
-        // MySQL
         options.UseMySql(defaultConn, ServerVersion.AutoDetect(defaultConn));
-    }
     else
-    {
-        // SQLite como fallback (local)
         options.UseSqlite(defaultConn ?? "Data Source=gestomei.db");
-    }
 });
 
-builder.Services.AddEndpointsApiExplorer(); // Permite gerar documentação (Swagger)
-builder.Services.AddSwaggerGen(); // Gera a documentação interativa de APIs
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
 
-// Habilita CORS para permitir que o front-end (HTML/JS) acesse a API.
-// Em um projeto real, ajuste para apenas domínios autorizados.
 builder.Services.AddCors(options =>
-{
-    options.AddPolicy("LocalDev", policy =>
-        policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod());
-});
+    options.AddPolicy("LocalDev", p => p.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod()));
 
-var app = builder.Build(); // Constrói a aplicação com os serviços configurados
+var app = builder.Build();
 
-// Cria o arquivo do banco de dados SQLite automaticamente na primeira execução.
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    db.Database.EnsureCreated(); // Cria o banco se não existir
+    try { db.Database.EnsureCreated(); }
+    catch
+    {
+        // Schema desatualizado — recria o banco (ambiente de desenvolvimento)
+        db.Database.EnsureDeleted();
+        db.Database.EnsureCreated();
+    }
 
-    // Se não existir usuário Master, cria um padrão para gerenciar o sistema.
     if (!db.Users.Any(u => u.Role == UserRole.Master))
     {
         db.Users.Add(new User
         {
-            Username = "master",
-            Password = "master", // Em produção, use hash + senha forte
-            FullName = "Usuário Master",
-            Email = "master@localhost",
+            Username = "master", Password = "master",
+            FullName = "Usuário Master", Email = "master@localhost",
             Role = UserRole.Master
         });
         db.SaveChanges();
     }
 
-    // Se não existir plano de contas, cria uma estrutura básica
-    if (!db.AccountPlans.Any())
+    // Plano de contas modelo MEI — verifica por código para não duplicar
+    var planSeed = new List<(string Code, string Name, string Type)>
     {
-        db.AccountPlans.AddRange(
-            new AccountPlan { Code = "1.0", Name = "Receitas", Type = "Receita" },
-            new AccountPlan { Code = "2.0", Name = "Despesas", Type = "Despesa" }
-        );
-        db.SaveChanges();
-    }
+        ("1.0",   "Receitas",                        "Receita"),
+        ("1.1",   "Receitas de Serviços",             "Receita"),
+        ("1.2",   "Receitas de Vendas",               "Receita"),
+        ("1.3",   "Receitas Industriais",             "Receita"),
+        ("1.4",   "Outras Receitas Operacionais",     "Receita"),
+        ("1.5",   "Receitas Financeiras",             "Receita"),
+        ("2.0",   "Despesas",                         "Despesa"),
+        ("2.1",   "Despesas com Pessoal",             "Despesa"),
+        ("2.1.1", "Salários e Ordenados",             "Despesa"),
+        ("2.1.2", "Encargos Sociais",                 "Despesa"),
+        ("2.2",   "Despesas com Fornecedores",        "Despesa"),
+        ("2.2.1", "Compra de Mercadorias",            "Despesa"),
+        ("2.2.2", "Matéria-Prima",                    "Despesa"),
+        ("2.3",   "Despesas Administrativas",         "Despesa"),
+        ("2.3.1", "Aluguel",                          "Despesa"),
+        ("2.3.2", "Água e Energia Elétrica",          "Despesa"),
+        ("2.3.3", "Telefone e Internet",              "Despesa"),
+        ("2.3.4", "Material de Escritório",           "Despesa"),
+        ("2.4",   "Tributos e Impostos",              "Despesa"),
+        ("2.4.1", "DAS (Simples Nacional)",           "Despesa"),
+        ("2.4.2", "IPTU e Taxas Municipais",          "Despesa"),
+        ("2.5",   "Despesas Financeiras",             "Despesa"),
+        ("2.5.1", "Juros e Encargos",                 "Despesa"),
+        ("2.5.2", "Tarifas Bancárias",                "Despesa"),
+        ("2.6",   "Marketing e Publicidade",          "Despesa"),
+        ("2.7",   "Outras Despesas",                  "Despesa"),
+    };
+
+    var existingCodes = db.AccountPlans.Select(p => p.Code).ToHashSet();
+    foreach (var (code, name, type) in planSeed)
+        if (!existingCodes.Contains(code))
+            db.AccountPlans.Add(new AccountPlan { Code = code, Name = name, Type = type });
+    db.SaveChanges();
 }
 
-// Permite que o front-end acesse a API via CORS.
 app.UseCors("LocalDev");
 
-// No modo desenvolvimento, habilita o Swagger (página de testes da API)
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
 
-// Helper simples para verificar o perfil do usuário via header HTTP "X-User-Role".
-// Exemplo de header: X-User-Role: Admin
 static UserRole? GetUserRole(HttpRequest request)
 {
-    if (!request.Headers.TryGetValue("X-User-Role", out var values))
-        return null;
-
-    var roleString = values.ToString();
-    return Enum.TryParse<UserRole>(roleString, true, out var role) ? role : null;
+    if (!request.Headers.TryGetValue("X-User-Role", out var values)) return null;
+    return Enum.TryParse<UserRole>(values.ToString(), true, out var role) ? role : null;
 }
 
-static IResult? RequireRole(HttpRequest request, params UserRole[] allowedRoles)
+static IResult? RequireRole(HttpRequest request, params UserRole[] allowed)
 {
     var role = GetUserRole(request);
     if (role is null) return Results.Unauthorized();
-    return allowedRoles.Contains(role.Value) ? null : Results.Forbid();
+    return allowed.Contains(role.Value) ? null : Results.Forbid();
 }
 
-// ---------- ROTAS DE CADASTRO (MENU CADASTRO) ----------
+// ── EMPRESA ──────────────────────────────────────────────────────────────────
 
-// Retorna informações sobre o perfil atual (X-User-Role) e permissões.
-app.MapGet("/api/me", (HttpRequest req) =>
-{
-    var role = GetUserRole(req);
-    if (role is null) return Results.Unauthorized();
-
-    return Results.Ok(new
-    {
-        role = role.ToString(),
-        canManageCompanies = role == UserRole.Master || role == UserRole.Admin,
-        canManageCustomers = role == UserRole.Master || role == UserRole.Admin,
-        canManageUsers = role == UserRole.Master || role == UserRole.Admin,
-        canManageAccountPlans = role == UserRole.Master,
-        canView = true
-    });
-});
-
-// Empresa (somente Master/Admin)
 app.MapGet("/api/companies", async (AppDbContext db, HttpRequest req) =>
 {
-    if (RequireRole(req, UserRole.Master, UserRole.Admin) is IResult notAllowed) return notAllowed;
+    if (RequireRole(req, UserRole.Master, UserRole.Admin) is IResult e) return e;
     return Results.Ok(await db.Companies.AsNoTracking().ToListAsync());
 });
 
 app.MapGet("/api/companies/{id:int}", async (int id, AppDbContext db, HttpRequest req) =>
 {
-    if (RequireRole(req, UserRole.Master, UserRole.Admin) is IResult notAllowed) return notAllowed;
-    return await db.Companies.FindAsync(id) is var company && company is not null ? Results.Ok(company) : Results.NotFound();
+    if (RequireRole(req, UserRole.Master, UserRole.Admin) is IResult e) return e;
+    var c = await db.Companies.FindAsync(id);
+    return c is not null ? Results.Ok(c) : Results.NotFound();
 });
 
 app.MapPost("/api/companies", async (Company company, AppDbContext db, HttpRequest req) =>
 {
-    if (RequireRole(req, UserRole.Master, UserRole.Admin) is IResult notAllowed) return notAllowed;
+    if (RequireRole(req, UserRole.Master, UserRole.Admin) is IResult e) return e;
     db.Companies.Add(company);
     await db.SaveChangesAsync();
     return Results.Created($"/api/companies/{company.Id}", company);
@@ -136,83 +128,63 @@ app.MapPost("/api/companies", async (Company company, AppDbContext db, HttpReque
 
 app.MapPut("/api/companies/{id:int}", async (int id, Company input, AppDbContext db, HttpRequest req) =>
 {
-    if (RequireRole(req, UserRole.Master, UserRole.Admin) is IResult notAllowed) return notAllowed;
-
-    var company = await db.Companies.FindAsync(id);
-    if (company is null) return Results.NotFound();
-
-    company.Name = input.Name;
-    company.Cnpj = input.Cnpj;
-    company.Address = input.Address;
-    company.Phone = input.Phone;
-    company.Email = input.Email;
-    company.InscricaoEstadual = input.InscricaoEstadual;
-    company.InscricaoMunicipal = input.InscricaoMunicipal;
-    company.Responsavel = input.Responsavel;
-    company.DataAbertura = input.DataAbertura;
-    company.AtividadePrimaria = input.AtividadePrimaria;
-    company.AtividadesSecundarias = input.AtividadesSecundarias;
-    company.TipoAtividade = input.TipoAtividade;
-    company.LogoBase64 = input.LogoBase64;
-
+    if (RequireRole(req, UserRole.Master, UserRole.Admin) is IResult e) return e;
+    var c = await db.Companies.FindAsync(id);
+    if (c is null) return Results.NotFound();
+    c.Name = input.Name; c.Cnpj = input.Cnpj; c.Address = input.Address;
+    c.Phone = input.Phone; c.Email = input.Email;
+    c.InscricaoEstadual = input.InscricaoEstadual; c.InscricaoMunicipal = input.InscricaoMunicipal;
+    c.Responsavel = input.Responsavel; c.DataAbertura = input.DataAbertura;
+    c.AtividadePrimaria = input.AtividadePrimaria; c.AtividadesSecundarias = input.AtividadesSecundarias;
+    c.TipoAtividade = input.TipoAtividade; c.LogoBase64 = input.LogoBase64;
     await db.SaveChangesAsync();
-    return Results.Ok(company);
+    return Results.Ok(c);
 });
 
 app.MapDelete("/api/companies/{id:int}", async (int id, AppDbContext db, HttpRequest req) =>
 {
-    if (RequireRole(req, UserRole.Master) is IResult notAllowed) return notAllowed;
-
-    var company = await db.Companies.FindAsync(id);
-    if (company is null) return Results.NotFound();
-
-    db.Companies.Remove(company);
+    if (RequireRole(req, UserRole.Master) is IResult e) return e;
+    var c = await db.Companies.FindAsync(id);
+    if (c is null) return Results.NotFound();
+    db.Companies.Remove(c);
     await db.SaveChangesAsync();
     return Results.NoContent();
 });
 
-// Marca a empresa como inativa (somente Master)
 app.MapPost("/api/companies/{id:int}/inactivate", async (int id, AppDbContext db, HttpRequest req) =>
 {
-    if (RequireRole(req, UserRole.Master) is IResult notAllowed) return notAllowed;
-
-    var company = await db.Companies.FindAsync(id);
-    if (company is null) return Results.NotFound();
-
-    company.IsActive = false;
-    await db.SaveChangesAsync();
-    return Results.Ok(company);
+    if (RequireRole(req, UserRole.Master) is IResult e) return e;
+    var c = await db.Companies.FindAsync(id);
+    if (c is null) return Results.NotFound();
+    c.IsActive = false; await db.SaveChangesAsync(); return Results.Ok(c);
 });
 
-// Marca a empresa como ativa novamente (somente Master)
 app.MapPost("/api/companies/{id:int}/activate", async (int id, AppDbContext db, HttpRequest req) =>
 {
-    if (RequireRole(req, UserRole.Master) is IResult notAllowed) return notAllowed;
-
-    var company = await db.Companies.FindAsync(id);
-    if (company is null) return Results.NotFound();
-
-    company.IsActive = true;
-    await db.SaveChangesAsync();
-    return Results.Ok(company);
+    if (RequireRole(req, UserRole.Master) is IResult e) return e;
+    var c = await db.Companies.FindAsync(id);
+    if (c is null) return Results.NotFound();
+    c.IsActive = true; await db.SaveChangesAsync(); return Results.Ok(c);
 });
 
-// Cliente / Fornecedor (somente Master/Admin)
+// ── CLIENTE / FORNECEDOR ─────────────────────────────────────────────────────
+
 app.MapGet("/api/customersuppliers", async (AppDbContext db, HttpRequest req) =>
 {
-    if (RequireRole(req, UserRole.Master, UserRole.Admin) is IResult notAllowed) return notAllowed;
+    if (RequireRole(req, UserRole.Master, UserRole.Admin) is IResult e) return e;
     return Results.Ok(await db.CustomerSuppliers.AsNoTracking().ToListAsync());
 });
 
 app.MapGet("/api/customersuppliers/{id:int}", async (int id, AppDbContext db, HttpRequest req) =>
 {
-    if (RequireRole(req, UserRole.Master, UserRole.Admin) is IResult notAllowed) return notAllowed;
-    return await db.CustomerSuppliers.FindAsync(id) is var cs && cs is not null ? Results.Ok(cs) : Results.NotFound();
+    if (RequireRole(req, UserRole.Master, UserRole.Admin) is IResult e) return e;
+    var cs = await db.CustomerSuppliers.FindAsync(id);
+    return cs is not null ? Results.Ok(cs) : Results.NotFound();
 });
 
 app.MapPost("/api/customersuppliers", async (CustomerSupplier cs, AppDbContext db, HttpRequest req) =>
 {
-    if (RequireRole(req, UserRole.Master, UserRole.Admin) is IResult notAllowed) return notAllowed;
+    if (RequireRole(req, UserRole.Master, UserRole.Admin) is IResult e) return e;
     db.CustomerSuppliers.Add(cs);
     await db.SaveChangesAsync();
     return Results.Created($"/api/customersuppliers/{cs.Id}", cs);
@@ -220,49 +192,43 @@ app.MapPost("/api/customersuppliers", async (CustomerSupplier cs, AppDbContext d
 
 app.MapPut("/api/customersuppliers/{id:int}", async (int id, CustomerSupplier input, AppDbContext db, HttpRequest req) =>
 {
-    if (RequireRole(req, UserRole.Master, UserRole.Admin) is IResult notAllowed) return notAllowed;
-
+    if (RequireRole(req, UserRole.Master, UserRole.Admin) is IResult e) return e;
     var cs = await db.CustomerSuppliers.FindAsync(id);
     if (cs is null) return Results.NotFound();
-
-    cs.Name = input.Name;
-    cs.Document = input.Document;
-    cs.Email = input.Email;
-    cs.Phone = input.Phone;
-    cs.IsSupplier = input.IsSupplier;
-
+    cs.Name = input.Name; cs.Document = input.Document;
+    cs.Email = input.Email; cs.Phone = input.Phone; cs.IsSupplier = input.IsSupplier;
     await db.SaveChangesAsync();
     return Results.Ok(cs);
 });
 
 app.MapDelete("/api/customersuppliers/{id:int}", async (int id, AppDbContext db, HttpRequest req) =>
 {
-    if (RequireRole(req, UserRole.Master, UserRole.Admin) is IResult notAllowed) return notAllowed;
-
+    if (RequireRole(req, UserRole.Master, UserRole.Admin) is IResult e) return e;
     var cs = await db.CustomerSuppliers.FindAsync(id);
     if (cs is null) return Results.NotFound();
-
     db.CustomerSuppliers.Remove(cs);
     await db.SaveChangesAsync();
     return Results.NoContent();
 });
 
-// Usuário (somente Master/Admin)
+// ── USUÁRIO ──────────────────────────────────────────────────────────────────
+
 app.MapGet("/api/users", async (AppDbContext db, HttpRequest req) =>
 {
-    if (RequireRole(req, UserRole.Master, UserRole.Admin) is IResult notAllowed) return notAllowed;
+    if (RequireRole(req, UserRole.Master, UserRole.Admin) is IResult e) return e;
     return Results.Ok(await db.Users.AsNoTracking().ToListAsync());
 });
 
 app.MapGet("/api/users/{id:int}", async (int id, AppDbContext db, HttpRequest req) =>
 {
-    if (RequireRole(req, UserRole.Master, UserRole.Admin) is IResult notAllowed) return notAllowed;
-    return await db.Users.FindAsync(id) is var user && user is not null ? Results.Ok(user) : Results.NotFound();
+    if (RequireRole(req, UserRole.Master, UserRole.Admin) is IResult e) return e;
+    var u = await db.Users.FindAsync(id);
+    return u is not null ? Results.Ok(u) : Results.NotFound();
 });
 
 app.MapPost("/api/users", async (User user, AppDbContext db, HttpRequest req) =>
 {
-    if (RequireRole(req, UserRole.Master, UserRole.Admin) is IResult notAllowed) return notAllowed;
+    if (RequireRole(req, UserRole.Master, UserRole.Admin) is IResult e) return e;
     db.Users.Add(user);
     await db.SaveChangesAsync();
     return Results.Created($"/api/users/{user.Id}", user);
@@ -270,50 +236,44 @@ app.MapPost("/api/users", async (User user, AppDbContext db, HttpRequest req) =>
 
 app.MapPut("/api/users/{id:int}", async (int id, User input, AppDbContext db, HttpRequest req) =>
 {
-    if (RequireRole(req, UserRole.Master, UserRole.Admin) is IResult notAllowed) return notAllowed;
-
-    var user = await db.Users.FindAsync(id);
-    if (user is null) return Results.NotFound();
-
-    user.Username = input.Username;
-    if (!string.IsNullOrWhiteSpace(input.Password))
-        user.Password = input.Password;
-    user.FullName = input.FullName;
-    user.Email = input.Email;
-    user.Role = input.Role;
-
+    if (RequireRole(req, UserRole.Master, UserRole.Admin) is IResult e) return e;
+    var u = await db.Users.FindAsync(id);
+    if (u is null) return Results.NotFound();
+    u.Username = input.Username;
+    if (!string.IsNullOrWhiteSpace(input.Password)) u.Password = input.Password;
+    u.FullName = input.FullName; u.Email = input.Email; u.Role = input.Role;
     await db.SaveChangesAsync();
-    return Results.Ok(user);
+    return Results.Ok(u);
 });
 
 app.MapDelete("/api/users/{id:int}", async (int id, AppDbContext db, HttpRequest req) =>
 {
-    if (RequireRole(req, UserRole.Master) is IResult notAllowed) return notAllowed;
-
-    var user = await db.Users.FindAsync(id);
-    if (user is null) return Results.NotFound();
-
-    db.Users.Remove(user);
+    if (RequireRole(req, UserRole.Master) is IResult e) return e;
+    var u = await db.Users.FindAsync(id);
+    if (u is null) return Results.NotFound();
+    db.Users.Remove(u);
     await db.SaveChangesAsync();
     return Results.NoContent();
 });
 
-// Plano de contas (qualquer perfil pode consultar, apenas Master pode alterar)
+// ── PLANO DE CONTAS ──────────────────────────────────────────────────────────
+
 app.MapGet("/api/accountplans", async (AppDbContext db, HttpRequest req) =>
 {
-    if (RequireRole(req, UserRole.Master, UserRole.Admin, UserRole.User, UserRole.Viewer) is IResult notAllowed) return notAllowed;
-    return Results.Ok(await db.AccountPlans.AsNoTracking().ToListAsync());
+    if (RequireRole(req, UserRole.Master, UserRole.Admin, UserRole.User, UserRole.Viewer) is IResult e) return e;
+    return Results.Ok(await db.AccountPlans.AsNoTracking().OrderBy(p => p.Code).ToListAsync());
 });
 
 app.MapGet("/api/accountplans/{id:int}", async (int id, AppDbContext db, HttpRequest req) =>
 {
-    if (RequireRole(req, UserRole.Master, UserRole.Admin, UserRole.User, UserRole.Viewer) is IResult notAllowed) return notAllowed;
-    return await db.AccountPlans.FindAsync(id) is var plan && plan is not null ? Results.Ok(plan) : Results.NotFound();
+    if (RequireRole(req, UserRole.Master, UserRole.Admin, UserRole.User, UserRole.Viewer) is IResult e) return e;
+    var p = await db.AccountPlans.FindAsync(id);
+    return p is not null ? Results.Ok(p) : Results.NotFound();
 });
 
 app.MapPost("/api/accountplans", async (AccountPlan plan, AppDbContext db, HttpRequest req) =>
 {
-    if (RequireRole(req, UserRole.Master) is IResult notAllowed) return notAllowed;
+    if (RequireRole(req, UserRole.Master) is IResult e) return e;
     db.AccountPlans.Add(plan);
     await db.SaveChangesAsync();
     return Results.Created($"/api/accountplans/{plan.Id}", plan);
@@ -321,29 +281,148 @@ app.MapPost("/api/accountplans", async (AccountPlan plan, AppDbContext db, HttpR
 
 app.MapPut("/api/accountplans/{id:int}", async (int id, AccountPlan input, AppDbContext db, HttpRequest req) =>
 {
-    if (RequireRole(req, UserRole.Master) is IResult notAllowed) return notAllowed;
-
-    var plan = await db.AccountPlans.FindAsync(id);
-    if (plan is null) return Results.NotFound();
-
-    plan.Code = input.Code;
-    plan.Name = input.Name;
-    plan.Type = input.Type;
-
+    if (RequireRole(req, UserRole.Master) is IResult e) return e;
+    var p = await db.AccountPlans.FindAsync(id);
+    if (p is null) return Results.NotFound();
+    p.Code = input.Code; p.Name = input.Name; p.Type = input.Type;
     await db.SaveChangesAsync();
     return Results.NoContent();
 });
 
 app.MapDelete("/api/accountplans/{id:int}", async (int id, AppDbContext db, HttpRequest req) =>
 {
-    if (RequireRole(req, UserRole.Master) is IResult notAllowed) return notAllowed;
-
-    var plan = await db.AccountPlans.FindAsync(id);
-    if (plan is null) return Results.NotFound();
-
-    db.AccountPlans.Remove(plan);
+    if (RequireRole(req, UserRole.Master) is IResult e) return e;
+    var p = await db.AccountPlans.FindAsync(id);
+    if (p is null) return Results.NotFound();
+    db.AccountPlans.Remove(p);
     await db.SaveChangesAsync();
     return Results.NoContent();
 });
 
-app.Run(); // inicia o servidor web
+// ── MOVIMENTO (TRANSAÇÕES) ───────────────────────────────────────────────────
+
+app.MapGet("/api/transactions", async (AppDbContext db, HttpRequest req, string? from, string? to, int? companyId) =>
+{
+    if (RequireRole(req, UserRole.Master, UserRole.Admin, UserRole.User, UserRole.Viewer) is IResult e) return e;
+    var query = db.Transactions.AsNoTracking().AsQueryable();
+    if (from != null) { var d = DateTime.Parse(from); query = query.Where(t => t.Date >= d); }
+    if (to   != null) { var d = DateTime.Parse(to).AddDays(1).AddTicks(-1); query = query.Where(t => t.Date <= d); }
+    if (companyId.HasValue) query = query.Where(t => t.CompanyId == companyId);
+    return Results.Ok(await query.OrderByDescending(t => t.Date).ToListAsync());
+});
+
+app.MapGet("/api/transactions/{id:int}", async (int id, AppDbContext db, HttpRequest req) =>
+{
+    if (RequireRole(req, UserRole.Master, UserRole.Admin, UserRole.User, UserRole.Viewer) is IResult e) return e;
+    var t = await db.Transactions.FindAsync(id);
+    return t is not null ? Results.Ok(t) : Results.NotFound();
+});
+
+app.MapPost("/api/transactions", async (Transaction tx, AppDbContext db, HttpRequest req) =>
+{
+    if (RequireRole(req, UserRole.Master, UserRole.Admin) is IResult e) return e;
+    db.Transactions.Add(tx);
+    await db.SaveChangesAsync();
+    return Results.Created($"/api/transactions/{tx.Id}", tx);
+});
+
+app.MapPut("/api/transactions/{id:int}", async (int id, Transaction input, AppDbContext db, HttpRequest req) =>
+{
+    if (RequireRole(req, UserRole.Master, UserRole.Admin) is IResult e) return e;
+    var tx = await db.Transactions.FindAsync(id);
+    if (tx is null) return Results.NotFound();
+    tx.Date = input.Date; tx.Description = input.Description; tx.Amount = input.Amount;
+    tx.Type = input.Type; tx.Category = input.Category;
+    tx.AccountPlanId = input.AccountPlanId; tx.AccountPlanCode = input.AccountPlanCode;
+    tx.AccountPlanName = input.AccountPlanName; tx.CompanyId = input.CompanyId;
+    await db.SaveChangesAsync();
+    return Results.Ok(tx);
+});
+
+app.MapDelete("/api/transactions/{id:int}", async (int id, AppDbContext db, HttpRequest req) =>
+{
+    if (RequireRole(req, UserRole.Master, UserRole.Admin) is IResult e) return e;
+    var tx = await db.Transactions.FindAsync(id);
+    if (tx is null) return Results.NotFound();
+    db.Transactions.Remove(tx);
+    await db.SaveChangesAsync();
+    return Results.NoContent();
+});
+
+// ── RELATÓRIOS ───────────────────────────────────────────────────────────────
+
+app.MapGet("/api/reports/dre", async (AppDbContext db, HttpRequest req, string? from, string? to, int? companyId) =>
+{
+    if (RequireRole(req, UserRole.Master, UserRole.Admin, UserRole.User, UserRole.Viewer) is IResult e) return e;
+
+    var fromDate = from != null ? DateTime.Parse(from) : new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
+    var toDate   = to   != null ? DateTime.Parse(to).AddDays(1).AddTicks(-1) : DateTime.Now;
+
+    var query = db.Transactions.AsNoTracking().Where(t => t.Date >= fromDate && t.Date <= toDate);
+    if (companyId.HasValue) query = query.Where(t => t.CompanyId == companyId);
+    var txs = await query.ToListAsync();
+
+    var receitas = txs.Where(t => t.Type == TransactionType.Income)
+        .GroupBy(t => new { t.AccountPlanCode, t.AccountPlanName })
+        .Select(g => new { code = g.Key.AccountPlanCode, name = g.Key.AccountPlanName, total = g.Sum(t => t.Amount) })
+        .OrderBy(x => x.code).ToList();
+
+    var despesas = txs.Where(t => t.Type == TransactionType.Expense)
+        .GroupBy(t => new { t.AccountPlanCode, t.AccountPlanName })
+        .Select(g => new { code = g.Key.AccountPlanCode, name = g.Key.AccountPlanName, total = g.Sum(t => t.Amount) })
+        .OrderBy(x => x.code).ToList();
+
+    var totalR = receitas.Sum(r => r.total);
+    var totalD = despesas.Sum(d => d.total);
+
+    return Results.Ok(new
+    {
+        period = new { from = fromDate.ToString("yyyy-MM-dd"), to = toDate.ToString("yyyy-MM-dd") },
+        receitas,
+        totalReceitas = totalR,
+        despesas,
+        totalDespesas = totalD,
+        resultado = totalR - totalD
+    });
+});
+
+app.MapGet("/api/reports/extrato", async (AppDbContext db, HttpRequest req, string? from, string? to, int? companyId) =>
+{
+    if (RequireRole(req, UserRole.Master, UserRole.Admin, UserRole.User, UserRole.Viewer) is IResult e) return e;
+
+    var fromDate = from != null ? DateTime.Parse(from) : new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
+    var toDate   = to   != null ? DateTime.Parse(to).AddDays(1).AddTicks(-1) : DateTime.Now;
+
+    var query = db.Transactions.AsNoTracking().Where(t => t.Date >= fromDate && t.Date <= toDate);
+    if (companyId.HasValue) query = query.Where(t => t.CompanyId == companyId);
+    var txs = await query.OrderBy(t => t.Date).ToListAsync();
+
+    var totalR = txs.Where(t => t.Type == TransactionType.Income).Sum(t => t.Amount);
+    var totalD = txs.Where(t => t.Type == TransactionType.Expense).Sum(t => t.Amount);
+
+    return Results.Ok(new
+    {
+        period = new { from = fromDate.ToString("yyyy-MM-dd"), to = toDate.ToString("yyyy-MM-dd") },
+        transactions = txs,
+        totalReceitas = totalR,
+        totalDespesas = totalD,
+        saldo = totalR - totalD
+    });
+});
+
+app.MapGet("/api/me", (HttpRequest req) =>
+{
+    var role = GetUserRole(req);
+    if (role is null) return Results.Unauthorized();
+    return Results.Ok(new
+    {
+        role = role.ToString(),
+        canManageCompanies    = role == UserRole.Master || role == UserRole.Admin,
+        canManageCustomers    = role == UserRole.Master || role == UserRole.Admin,
+        canManageUsers        = role == UserRole.Master || role == UserRole.Admin,
+        canManageAccountPlans = role == UserRole.Master,
+        canView = true
+    });
+});
+
+app.Run();

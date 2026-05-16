@@ -685,6 +685,500 @@ function updateUiForRole() {
   updateRoleInfo();
 }
 
+// ── MOVIMENTO ────────────────────────────────────────────────────────────────
+
+let _accountPlanCache = [];
+let _companyCache = [];
+
+async function _fetchAccountPlanCache() {
+  try {
+    const res = await fetch(`${apiBase}/api/accountplans`, { headers: getRoleHeader() });
+    if (res.ok) _accountPlanCache = await res.json();
+  } catch (_) {}
+}
+
+async function _fetchCompanyCache() {
+  try {
+    const res = await fetch(`${apiBase}/api/companies`, { headers: getRoleHeader() });
+    if (res.ok) _companyCache = await res.json();
+  } catch (_) {}
+}
+
+function _populateAccountPlanSelect(selectId) {
+  const sel = document.getElementById(selectId);
+  if (!sel) return;
+  const prev = sel.value;
+  sel.innerHTML = '<option value="">— Selecione o Plano de Contas —</option>';
+  _accountPlanCache.forEach(p => {
+    const opt = document.createElement("option");
+    opt.value = p.id;
+    opt.dataset.type = p.type;
+    opt.dataset.code = p.code;
+    opt.dataset.name = p.name;
+    opt.textContent = `${p.code} — ${p.name} (${p.type})`;
+    if (String(p.id) === prev) opt.selected = true;
+    sel.appendChild(opt);
+  });
+}
+
+function _populateCompanySelect(selectId, placeholder = "— Todas as Empresas —") {
+  const sel = document.getElementById(selectId);
+  if (!sel) return;
+  sel.innerHTML = `<option value="">${placeholder}</option>`;
+  _companyCache.filter(c => c.isActive !== false).forEach(c => {
+    const opt = document.createElement("option");
+    opt.value = c.id;
+    opt.textContent = c.name;
+    sel.appendChild(opt);
+  });
+}
+
+function formatCurrency(v) {
+  return (v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
+
+async function loadTransactions() {
+  const from = document.getElementById("movFrom")?.value;
+  const to   = document.getElementById("movTo")?.value;
+  const typeFilter    = document.getElementById("movFilterType")?.value;
+  const companyFilter = document.getElementById("movCompanyFilter")?.value;
+
+  let url = `${apiBase}/api/transactions?`;
+  if (from) url += `from=${from}&`;
+  if (to)   url += `to=${to}&`;
+
+  const res = await fetch(url, { headers: getRoleHeader() });
+  const list = document.getElementById("transactions");
+  list.innerHTML = "";
+
+  if (!res.ok) {
+    list.innerHTML = `<li style="color:red">Erro: ${res.status}</li>`;
+    return;
+  }
+
+  let data = await res.json();
+  if (typeFilter !== "") data = data.filter(t => String(t.type) === typeFilter);
+  if (companyFilter)     data = data.filter(t => String(t.companyId) === companyFilter);
+
+  const totalR = data.filter(t => t.type === 0).reduce((s, t) => s + t.amount, 0);
+  const totalD = data.filter(t => t.type === 1).reduce((s, t) => s + t.amount, 0);
+
+  document.getElementById("movSummary").innerHTML = `
+    <div class="mov-summary-item receita">
+      <div class="summary-label">Receitas</div>
+      <div class="summary-value">${formatCurrency(totalR)}</div>
+    </div>
+    <div class="mov-summary-item despesa">
+      <div class="summary-label">Despesas</div>
+      <div class="summary-value">${formatCurrency(totalD)}</div>
+    </div>
+    <div class="mov-summary-item saldo">
+      <div class="summary-label">Saldo</div>
+      <div class="summary-value">${formatCurrency(totalR - totalD)}</div>
+    </div>
+  `;
+
+  data.forEach(item => {
+    const li = document.createElement("li");
+    const tipo = item.type === 0 ? "🟢 Receita" : "🔴 Despesa";
+    const date = item.date ? new Date(item.date).toLocaleDateString("pt-BR") : "—";
+    const conta = item.accountPlanCode
+      ? `${item.accountPlanCode} — ${item.accountPlanName}`
+      : (item.category || "—");
+    li.innerHTML = `
+      <span class="item-text">${date} | ${item.description} | ${conta} | ${formatCurrency(item.amount)} | ${tipo}</span>
+      <span class="item-actions"></span>
+    `;
+    const actions = li.querySelector(".item-actions");
+    if (canEdit()) {
+      const btnEdit = document.createElement("button");
+      btnEdit.className = "btn-edit btn-sm"; btnEdit.textContent = "✏️";
+      btnEdit.onclick = () => editTransaction(item);
+      actions.appendChild(btnEdit);
+      const btnDel = document.createElement("button");
+      btnDel.className = "btn-danger btn-sm"; btnDel.textContent = "🗑️";
+      btnDel.onclick = () => deleteTransaction(item.id);
+      actions.appendChild(btnDel);
+    }
+    list.appendChild(li);
+  });
+
+  if (data.length === 0)
+    list.innerHTML = "<li style='color:#888;background:none;border:none'>Nenhum lançamento encontrado.</li>";
+}
+
+async function createTransaction(event) {
+  event.preventDefault();
+  const dateEl   = document.getElementById("movDate");
+  const descEl   = document.getElementById("movDesc");
+  const amtEl    = document.getElementById("movAmount");
+  const planEl   = document.getElementById("movAccountPlan");
+
+  let ok = true;
+  ok = setFieldValidity(dateEl, dateEl.value !== "")      && ok;
+  ok = setFieldValidity(descEl, descEl.value.trim() !== "") && ok;
+  ok = setFieldValidity(amtEl,  parseFloat(amtEl.value) > 0) && ok;
+  ok = setFieldValidity(planEl, planEl.value !== "")      && ok;
+  if (!ok) return;
+
+  const opt = planEl.options[planEl.selectedIndex];
+  const payload = {
+    date: dateEl.value,
+    description: descEl.value,
+    amount: parseFloat(amtEl.value),
+    type: opt.dataset.type === "Receita" ? 0 : 1,
+    category: opt.dataset.name || "",
+    accountPlanId: parseInt(planEl.value),
+    accountPlanCode: opt.dataset.code || "",
+    accountPlanName: opt.dataset.name || "",
+    companyId: document.getElementById("movCompany").value
+      ? parseInt(document.getElementById("movCompany").value) : null,
+  };
+
+  const res = await fetch(`${apiBase}/api/transactions`, {
+    method: "POST",
+    headers: { ...getRoleHeader(), "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+
+  if (!res.ok) { showMessage("movMessage", `Erro: ${res.status}`, true); return; }
+  showMessage("movMessage", "Lançamento salvo com sucesso!");
+  document.getElementById("movForm").reset();
+  loadTransactions();
+}
+
+function editTransaction(item) {
+  const date = item.date ? item.date.substring(0, 10) : "";
+  const planOpts = _accountPlanCache.map(p => `
+    <option value="${p.id}" data-type="${p.type}" data-code="${p.code}" data-name="${p.name}"
+      ${p.id === item.accountPlanId ? "selected" : ""}>
+      ${p.code} — ${p.name} (${p.type})
+    </option>`).join("");
+
+  openModal("✏️ Editar Lançamento", `
+    <label>Data: *<input type="date" id="eMovDate" value="${date}" /></label>
+    <label>Descrição: *<input type="text" id="eMovDesc" value="${item.description}" /></label>
+    <label>Valor (R$): *<input type="number" id="eMovAmount" step="0.01" value="${item.amount}" /></label>
+    <label>Plano de Contas:
+      <select id="eMovPlan"><option value="">— Selecione —</option>${planOpts}</select>
+    </label>
+  `, async () => {
+    const pl = document.getElementById("eMovPlan");
+    const opt = pl.options[pl.selectedIndex];
+    const payload = {
+      id: item.id,
+      date: document.getElementById("eMovDate").value,
+      description: document.getElementById("eMovDesc").value,
+      amount: parseFloat(document.getElementById("eMovAmount").value),
+      type: opt.dataset.type === "Receita" ? 0 : 1,
+      category: opt.dataset.name || item.category,
+      accountPlanId: pl.value ? parseInt(pl.value) : null,
+      accountPlanCode: opt.dataset.code || "",
+      accountPlanName: opt.dataset.name || "",
+      companyId: item.companyId,
+    };
+    const res = await fetch(`${apiBase}/api/transactions/${item.id}`, {
+      method: "PUT",
+      headers: { ...getRoleHeader(), "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) { alert(`Erro: ${res.status}`); return; }
+    closeModal();
+    showMessage("movMessage", "Lançamento atualizado!");
+    loadTransactions();
+  });
+}
+
+async function deleteTransaction(id) {
+  if (!confirm("Excluir este lançamento?")) return;
+  const res = await fetch(`${apiBase}/api/transactions/${id}`, {
+    method: "DELETE", headers: getRoleHeader(),
+  });
+  if (!res.ok) { showMessage("movMessage", `Erro: ${res.status}`, true); return; }
+  showMessage("movMessage", "Lançamento excluído.");
+  loadTransactions();
+}
+
+async function loadMovimento() {
+  await Promise.all([_fetchAccountPlanCache(), _fetchCompanyCache()]);
+  const today    = new Date();
+  const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+  const movFrom  = document.getElementById("movFrom");
+  const movTo    = document.getElementById("movTo");
+  if (!movFrom.value) movFrom.value = firstDay.toISOString().substring(0, 10);
+  if (!movTo.value)   movTo.value   = today.toISOString().substring(0, 10);
+  _populateAccountPlanSelect("movAccountPlan");
+  _populateCompanySelect("movCompany", "— Sem empresa vinculada —");
+  _populateCompanySelect("movCompanyFilter");
+  loadTransactions();
+}
+
+// ── RELATÓRIO ─────────────────────────────────────────────────────────────────
+
+let _reportData = null;
+let _reportZoom = 1.0;
+
+async function loadRelatorio() {
+  await Promise.all([_fetchAccountPlanCache(), _fetchCompanyCache()]);
+  const today    = new Date();
+  const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+  const repFrom  = document.getElementById("repFrom");
+  const repTo    = document.getElementById("repTo");
+  if (!repFrom.value) repFrom.value = firstDay.toISOString().substring(0, 10);
+  if (!repTo.value)   repTo.value   = today.toISOString().substring(0, 10);
+  _populateCompanySelect("repCompany");
+}
+
+async function generateReport() {
+  const from      = document.getElementById("repFrom").value;
+  const to        = document.getElementById("repTo").value;
+  const type      = document.getElementById("repType").value;
+  const companyId = document.getElementById("repCompany").value;
+
+  let url = `${apiBase}/api/reports/${type}?`;
+  if (from)      url += `from=${from}&`;
+  if (to)        url += `to=${to}&`;
+  if (companyId) url += `companyId=${companyId}`;
+
+  const res = await fetch(url, { headers: getRoleHeader() });
+  if (!res.ok) { alert(`Erro ao gerar relatório: ${res.status}`); return; }
+
+  _reportData = await res.json();
+  _reportData._type = type;
+  _renderReport();
+  document.getElementById("reportToolbar").style.display = "flex";
+}
+
+function _getReportCompanyLabel() {
+  const sel = document.getElementById("repCompany");
+  return sel?.options[sel.selectedIndex]?.text || "Todas as Empresas";
+}
+
+function _fmtDate(isoDate) {
+  if (!isoDate) return "—";
+  return new Date(isoDate + "T00:00:00").toLocaleDateString("pt-BR");
+}
+
+function _renderReport() {
+  const d       = _reportData;
+  const preview = document.getElementById("reportPreview");
+  const company = _getReportCompanyLabel();
+  const from    = _fmtDate(d.period?.from);
+  const to      = _fmtDate(d.period?.to);
+  d._type === "dre" ? _renderDRE(preview, d, company, from, to)
+                    : _renderExtrato(preview, d, company, from, to);
+  _applyZoom();
+}
+
+function _renderDRE(el, d, company, from, to) {
+  const saldoCss = d.resultado >= 0 ? "color:#217346" : "color:#C0392B";
+  const recRows  = d.receitas?.length
+    ? d.receitas.map(r => `<tr><td style="padding-left:1.6rem">${r.code} — ${r.name}</td><td class="amount">${formatCurrency(r.total)}</td></tr>`).join("")
+    : `<tr><td colspan="2" style="color:#999;font-style:italic;padding-left:1.6rem">Sem registros</td></tr>`;
+  const depRows  = d.despesas?.length
+    ? d.despesas.map(r => `<tr><td style="padding-left:1.6rem">${r.code} — ${r.name}</td><td class="amount">${formatCurrency(r.total)}</td></tr>`).join("")
+    : `<tr><td colspan="2" style="color:#999;font-style:italic;padding-left:1.6rem">Sem registros</td></tr>`;
+
+  el.innerHTML = `
+    <div class="report-title">
+      <h1>Demonstrativo de Resultado do Exercício</h1>
+      <p>${company} &nbsp;|&nbsp; Período: ${from} a ${to}</p>
+    </div>
+    <table class="report-table">
+      <thead><tr><th>Conta</th><th style="text-align:right;width:160px">Valor</th></tr></thead>
+      <tbody>
+        <tr class="group-header"><td>RECEITAS</td><td></td></tr>
+        ${recRows}
+        <tr class="total-row">
+          <td>TOTAL DE RECEITAS</td>
+          <td class="amount">${formatCurrency(d.totalReceitas)}</td>
+        </tr>
+        <tr style="height:6px;background:none"><td colspan="2"></td></tr>
+        <tr class="group-header"><td>DESPESAS</td><td></td></tr>
+        ${depRows}
+        <tr class="total-row">
+          <td>TOTAL DE DESPESAS</td>
+          <td class="amount">${formatCurrency(d.totalDespesas)}</td>
+        </tr>
+        <tr style="height:6px;background:none"><td colspan="2"></td></tr>
+        <tr class="resultado-row">
+          <td>RESULTADO LÍQUIDO DO PERÍODO</td>
+          <td class="amount" style="${saldoCss}">${formatCurrency(d.resultado)}</td>
+        </tr>
+      </tbody>
+    </table>
+    <p style="font-size:0.7rem;color:#aaa;margin-top:1.5rem;text-align:right">
+      Gerado em ${new Date().toLocaleString("pt-BR")}
+    </p>`;
+}
+
+function _renderExtrato(el, d, company, from, to) {
+  const rows = (d.transactions || []).map(t => {
+    const dateFmt = t.date ? new Date(t.date).toLocaleDateString("pt-BR") : "—";
+    const tipo    = t.type === 0 ? "Receita" : "Despesa";
+    const css     = t.type === 0 ? "color:#217346" : "color:#C0392B";
+    const conta   = t.accountPlanCode ? `${t.accountPlanCode} — ${t.accountPlanName}` : (t.category || "—");
+    return `<tr>
+      <td>${dateFmt}</td><td>${t.description}</td><td>${conta}</td>
+      <td style="${css}">${tipo}</td>
+      <td class="amount" style="${css}">${formatCurrency(t.amount)}</td>
+    </tr>`;
+  }).join("") || `<tr><td colspan="5" style="text-align:center;color:#999;font-style:italic">Sem lançamentos no período</td></tr>`;
+
+  el.innerHTML = `
+    <div class="report-title">
+      <h1>Extrato de Movimentos</h1>
+      <p>${company} &nbsp;|&nbsp; Período: ${from} a ${to}</p>
+    </div>
+    <table class="report-table">
+      <thead><tr><th>Data</th><th>Descrição</th><th>Conta</th><th>Tipo</th><th style="text-align:right">Valor</th></tr></thead>
+      <tbody>
+        ${rows}
+        <tr class="total-row">
+          <td colspan="3"></td><td>Receitas:</td>
+          <td class="amount" style="color:#217346">${formatCurrency(d.totalReceitas)}</td>
+        </tr>
+        <tr class="total-row">
+          <td colspan="3"></td><td>Despesas:</td>
+          <td class="amount" style="color:#C0392B">${formatCurrency(d.totalDespesas)}</td>
+        </tr>
+        <tr class="resultado-row">
+          <td colspan="3"></td><td>Saldo:</td>
+          <td class="amount">${formatCurrency(d.saldo)}</td>
+        </tr>
+      </tbody>
+    </table>
+    <p style="font-size:0.7rem;color:#aaa;margin-top:1.5rem;text-align:right">
+      Gerado em ${new Date().toLocaleString("pt-BR")}
+    </p>`;
+}
+
+function _applyZoom() {
+  const preview = document.getElementById("reportPreview");
+  if (!preview) return;
+  preview.style.transform = `scale(${_reportZoom})`;
+  document.getElementById("zoomLevel").textContent = `${Math.round(_reportZoom * 100)}%`;
+}
+
+function zoomIn()    { _reportZoom = Math.min(_reportZoom + 0.1, 2.5);  _applyZoom(); }
+function zoomOut()   { _reportZoom = Math.max(_reportZoom - 0.1, 0.3);  _applyZoom(); }
+function zoomReset() { _reportZoom = 1.0;                                _applyZoom(); }
+
+function printReport() { window.print(); }
+
+function exportPDF() {
+  if (!_reportData || !window.jspdf) { alert("Biblioteca PDF não carregada."); return; }
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+  const company = _getReportCompanyLabel();
+  const from    = _fmtDate(_reportData.period?.from);
+  const to      = _fmtDate(_reportData.period?.to);
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(13);
+
+  if (_reportData._type === "dre") {
+    doc.text("DEMONSTRATIVO DE RESULTADO DO EXERCÍCIO", 105, 18, { align: "center" });
+    doc.setFont("helvetica", "normal"); doc.setFontSize(9);
+    doc.text(`${company}  |  Período: ${from} a ${to}`, 105, 25, { align: "center" });
+
+    const body = [];
+    body.push([{ content: "RECEITAS", colSpan: 2, styles: { fillColor: [43,87,154], textColor: 255, fontStyle: "bold" } }]);
+    (_reportData.receitas || []).forEach(r => body.push([`  ${r.code} — ${r.name}`, formatCurrency(r.total)]));
+    body.push([
+      { content: "TOTAL DE RECEITAS", styles: { fontStyle: "bold", fillColor: [240,240,240] } },
+      { content: formatCurrency(_reportData.totalReceitas), styles: { fontStyle: "bold", fillColor: [240,240,240], halign: "right" } },
+    ]);
+    body.push([{ content: " ", colSpan: 2, styles: { fillColor: 255 } }]);
+    body.push([{ content: "DESPESAS", colSpan: 2, styles: { fillColor: [43,87,154], textColor: 255, fontStyle: "bold" } }]);
+    (_reportData.despesas || []).forEach(d => body.push([`  ${d.code} — ${d.name}`, formatCurrency(d.total)]));
+    body.push([
+      { content: "TOTAL DE DESPESAS", styles: { fontStyle: "bold", fillColor: [240,240,240] } },
+      { content: formatCurrency(_reportData.totalDespesas), styles: { fontStyle: "bold", fillColor: [240,240,240], halign: "right" } },
+    ]);
+    body.push([{ content: " ", colSpan: 2, styles: { fillColor: 255 } }]);
+    const resColor = _reportData.resultado >= 0 ? [33,115,70] : [192,57,43];
+    body.push([
+      { content: "RESULTADO LÍQUIDO DO PERÍODO", styles: { fontStyle: "bold", fillColor: [43,87,154], textColor: 255 } },
+      { content: formatCurrency(_reportData.resultado), styles: { fontStyle: "bold", fillColor: resColor, textColor: 255, halign: "right" } },
+    ]);
+
+    doc.autoTable({ startY: 30, head: [["Conta", "Valor"]], body,
+      styles: { fontSize: 9 }, headStyles: { fillColor: [43,87,154] },
+      columnStyles: { 1: { halign: "right", cellWidth: 45 } } });
+    doc.save("DRE.pdf");
+
+  } else {
+    doc.text("EXTRATO DE MOVIMENTOS", 105, 18, { align: "center" });
+    doc.setFont("helvetica", "normal"); doc.setFontSize(9);
+    doc.text(`${company}  |  Período: ${from} a ${to}`, 105, 25, { align: "center" });
+
+    const body = (_reportData.transactions || []).map(t => [
+      t.date ? new Date(t.date).toLocaleDateString("pt-BR") : "—",
+      t.description,
+      t.accountPlanCode ? `${t.accountPlanCode} — ${t.accountPlanName}` : (t.category || "—"),
+      t.type === 0 ? "Receita" : "Despesa",
+      formatCurrency(t.amount),
+    ]);
+    body.push(["", "", "", "Receitas:", { content: formatCurrency(_reportData.totalReceitas), styles: { fontStyle: "bold", halign: "right" } }]);
+    body.push(["", "", "", "Despesas:", { content: formatCurrency(_reportData.totalDespesas), styles: { fontStyle: "bold", halign: "right" } }]);
+    body.push(["", "", "", "Saldo:", { content: formatCurrency(_reportData.saldo), styles: { fontStyle: "bold", halign: "right", fillColor: [43,87,154], textColor: 255 } }]);
+
+    doc.autoTable({ startY: 30, head: [["Data", "Descrição", "Conta", "Tipo", "Valor"]], body,
+      styles: { fontSize: 8 }, headStyles: { fillColor: [43,87,154] },
+      columnStyles: { 4: { halign: "right" } } });
+    doc.save("Extrato.pdf");
+  }
+}
+
+function exportXLS() {
+  if (!_reportData || !window.XLSX) { alert("Biblioteca XLS não carregada."); return; }
+  const company = _getReportCompanyLabel();
+  const from    = _fmtDate(_reportData.period?.from);
+  const to      = _fmtDate(_reportData.period?.to);
+  let rows, sheetName;
+
+  if (_reportData._type === "dre") {
+    sheetName = "DRE";
+    rows = [
+      ["DEMONSTRATIVO DE RESULTADO DO EXERCÍCIO"],
+      [`${company}  |  Período: ${from} a ${to}`], [],
+      ["Conta", "Valor (R$)"],
+      ["RECEITAS", ""],
+    ];
+    (_reportData.receitas || []).forEach(r => rows.push([`  ${r.code} — ${r.name}`, r.total]));
+    rows.push(["TOTAL DE RECEITAS", _reportData.totalReceitas]);
+    rows.push([]);
+    rows.push(["DESPESAS", ""]);
+    (_reportData.despesas || []).forEach(d => rows.push([`  ${d.code} — ${d.name}`, d.total]));
+    rows.push(["TOTAL DE DESPESAS", _reportData.totalDespesas]);
+    rows.push([]);
+    rows.push(["RESULTADO LÍQUIDO", _reportData.resultado]);
+  } else {
+    sheetName = "Extrato";
+    rows = [
+      ["EXTRATO DE MOVIMENTOS"],
+      [`${company}  |  Período: ${from} a ${to}`], [],
+      ["Data", "Descrição", "Conta", "Tipo", "Valor (R$)"],
+    ];
+    (_reportData.transactions || []).forEach(t => rows.push([
+      t.date ? new Date(t.date).toLocaleDateString("pt-BR") : "—",
+      t.description,
+      t.accountPlanCode ? `${t.accountPlanCode} — ${t.accountPlanName}` : (t.category || "—"),
+      t.type === 0 ? "Receita" : "Despesa",
+      t.amount,
+    ]));
+    rows.push([], ["", "", "", "Total Receitas", _reportData.totalReceitas]);
+    rows.push(["", "", "", "Total Despesas", _reportData.totalDespesas]);
+    rows.push(["", "", "", "Saldo", _reportData.saldo]);
+  }
+
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, sheetName);
+  XLSX.writeFile(wb, `${sheetName}_${_reportData.period?.from || "relatorio"}.xlsx`);
+}
+
 // ── Navegação ─────────────────────────────────────────────────────────────────
 
 const cadastroPages = ["company", "user", "accountplan", "customer"];
@@ -694,6 +1188,8 @@ const pageLoaders = {
   customer:    loadCustomers,
   user:        loadUsers,
   accountplan: loadAccountPlans,
+  movimento:   loadMovimento,
+  relatorio:   loadRelatorio,
 };
 
 function setActiveTab(pageId) {
@@ -736,6 +1232,7 @@ document.getElementById("companyForm").addEventListener("submit", createCompany)
 document.getElementById("customerForm").addEventListener("submit", createCustomer);
 document.getElementById("userForm").addEventListener("submit", createUser);
 document.getElementById("accountPlanForm").addEventListener("submit", createAccountPlan);
+document.getElementById("movForm").addEventListener("submit", createTransaction);
 
 document.getElementById("companySearch").addEventListener("input", loadCompanies);
 document.getElementById("customerSearch").addEventListener("input", loadCustomers);
