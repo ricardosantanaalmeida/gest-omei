@@ -9,7 +9,7 @@
 <body>
   <div class="app">
 
-    <!-- ═══ HEADER (título + perfil) ═══ -->
+    <!-- ═══ HEADER ═══ -->
     <header class="app-header">
       <div class="app-title">
         📊 Gest-Omei
@@ -26,10 +26,8 @@
       </div>
     </header>
 
-    <!-- ═══ TAB BAR (menu superior) ═══ -->
+    <!-- ═══ TAB BAR ═══ -->
     <nav class="tab-bar">
-
-      <!-- Cadastro (com dropdown) -->
       <div class="tab-item" id="tabCadastro">
         <button class="tab active" type="button" id="tabCadastroBtn">Cadastro ▾</button>
         <div class="tab-dropdown" id="tabCadastroMenu">
@@ -39,19 +37,15 @@
           <button type="button" data-page="customer">🤝 Cliente/Fornecedor</button>
         </div>
       </div>
-
       <div class="tab-item">
         <button class="tab" type="button" data-page="movimento">💰 Movimento</button>
       </div>
-
       <div class="tab-item">
         <button class="tab" type="button" data-page="relatorio">📊 Relatório</button>
       </div>
-
       <div class="tab-item">
         <button class="tab" type="button" data-page="ajuda">❓ Ajuda</button>
       </div>
-
       <div class="tab-bar-right">
         <div id="roleInfo"></div>
       </div>
@@ -65,34 +59,68 @@
         <div class="card">
           <div class="card-titlebar"><h2>🏢 Cadastro de Empresa</h2></div>
           <div class="card-body">
-            <div class="search-bar">
-              <input type="text" id="companySearch" placeholder="Buscar por nome ou CNPJ..." />
-              <button type="button" onclick="loadCompanies()">↻ Atualizar</button>
+
+            <div class="action-bar">
+              <button type="button" class="btn-action btn-action-new"     id="companyBtnNovo"      onclick="setCadastroMode('company','novo')">➕ Novo</button>
+              <button type="button" class="btn-action btn-action-consult" id="companyBtnConsultar" onclick="setCadastroMode('company','consultar')">🔍 Consultar</button>
+              <button type="button" class="btn-action btn-action-edit"    id="companyBtnAlterar"   onclick="setCadastroMode('company','alterar')">✏️ Alterar</button>
+              <button type="button" class="btn-action btn-action-delete"  id="companyBtnExcluir"   onclick="setCadastroMode('company','excluir')">🗑️ Excluir</button>
+              <button type="button" class="btn-action btn-action-audit"   onclick="toggleAudit('company')">📋 Histórico</button>
             </div>
-            <ul id="companies"></ul>
-            <h3>Nova Empresa</h3>
+
             <div id="companyMessage" class="message" style="display:none"></div>
-            <form id="companyForm">
-              <label>Nome: *<input type="text" id="companyName" required /><span class="field-error">Campo obrigatório.</span></label>
-              <label>CNPJ/CPF:<input type="text" id="companyCnpj" placeholder="00.000.000/0000-00 ou 000.000.000-00" /><span class="field-error">CNPJ ou CPF inválido.</span></label>
-              <label>Endereço:<input type="text" id="companyAddress" /></label>
-              <label>Telefone:<input type="text" id="companyPhone" placeholder="(00) 00000-0000" /></label>
-              <label>E-mail:<input type="email" id="companyEmail" /><span class="field-error">E-mail inválido.</span></label>
-              <label>Inscrição Estadual:<input type="text" id="companyInscricaoEstadual" /></label>
-              <label>Inscrição Municipal:<input type="text" id="companyInscricaoMunicipal" /></label>
-              <label>Responsável:<input type="text" id="companyResponsavel" /></label>
-              <label>Data de Abertura:<input type="date" id="companyDataAbertura" /></label>
-              <label>Atividade Primária:<input type="text" id="companyAtividadePrimaria" /></label>
-              <label>Atividades Secundárias:<input type="text" id="companyAtividadesSecundarias" placeholder="Separe por vírgula" /></label>
-              <fieldset>
-                <legend>Tipo de Atividade</legend>
-                <label><input type="checkbox" name="companyTipoAtividade" value="Servico" /> Prestadora de Serviço</label>
-                <label><input type="checkbox" name="companyTipoAtividade" value="Comercio" /> Comércio</label>
-                <label><input type="checkbox" name="companyTipoAtividade" value="Industria" /> Indústria</label>
-              </fieldset>
-              <label>Logo (PNG/JPG):<input type="file" id="companyLogo" accept="image/png,image/jpeg" /></label>
-              <button type="submit" class="btn-primary">💾 Salvar Empresa</button>
-            </form>
+            <div id="companyModeInfo" class="mode-info" style="display:none"></div>
+
+            <div id="companyListPanel" style="display:none">
+              <div class="search-bar">
+                <input type="text" id="companySearch" placeholder="Buscar por nome ou CNPJ..." />
+                <button type="button" onclick="loadCompanies()">↻ Atualizar</button>
+              </div>
+              <ul id="companies"></ul>
+            </div>
+
+            <div id="companyFormPanel" style="display:none">
+              <form id="companyForm">
+                <div class="form-grid-2">
+                  <label>Nome: *<input type="text" id="companyName" required /><span class="field-error">Campo obrigatório.</span></label>
+                  <label>CNPJ/CPF:<input type="text" id="companyCnpj" placeholder="00.000.000/0000-00 ou 000.000.000-00" /><span class="field-error">CNPJ ou CPF inválido.</span></label>
+                  <label>Endereço:<input type="text" id="companyAddress" /></label>
+                  <label>Telefone:<input type="text" id="companyPhone" placeholder="(00) 00000-0000" /></label>
+                  <label>E-mail:<input type="email" id="companyEmail" /><span class="field-error">E-mail inválido.</span></label>
+                  <label>Inscrição Estadual:<input type="text" id="companyInscricaoEstadual" /></label>
+                  <label>Inscrição Municipal:<input type="text" id="companyInscricaoMunicipal" /></label>
+                  <label>Responsável:<input type="text" id="companyResponsavel" /></label>
+                  <label>Data de Abertura:<input type="date" id="companyDataAbertura" /></label>
+                  <label>Atividade Primária:<input type="text" id="companyAtividadePrimaria" /></label>
+                  <label style="grid-column:span 2">Atividades Secundárias:<input type="text" id="companyAtividadesSecundarias" placeholder="Separe por vírgula" /></label>
+                </div>
+                <fieldset style="margin-top:0.4rem">
+                  <legend>Tipo de Atividade</legend>
+                  <label><input type="checkbox" name="companyTipoAtividade" value="Servico" /> Prestadora de Serviço</label>
+                  <label><input type="checkbox" name="companyTipoAtividade" value="Comercio" /> Comércio</label>
+                  <label><input type="checkbox" name="companyTipoAtividade" value="Industria" /> Indústria</label>
+                </fieldset>
+                <label style="margin-top:0.4rem">Logo (PNG/JPG):<input type="file" id="companyLogo" accept="image/png,image/jpeg" /></label>
+                <div class="form-actions">
+                  <button type="submit" class="btn-primary" id="companySubmitBtn">💾 Salvar Empresa</button>
+                  <button type="button" onclick="setCadastroMode('company','consultar')">Cancelar</button>
+                </div>
+              </form>
+            </div>
+
+            <div id="companyAuditPanel" class="audit-panel" style="display:none">
+              <div class="audit-panel-header">
+                <strong>📋 Histórico de Ações — Empresa</strong>
+                <button type="button" class="btn-sm" onclick="toggleAudit('company')">✕ Fechar</button>
+              </div>
+              <div class="audit-table-wrap">
+                <table class="audit-table">
+                  <thead><tr><th>Usuário</th><th>Atividade realizada</th><th>Empresa / Registro</th><th>Data e hora</th></tr></thead>
+                  <tbody id="companyAuditBody"></tbody>
+                </table>
+              </div>
+            </div>
+
           </div>
         </div>
       </section>
@@ -102,26 +130,60 @@
         <div class="card">
           <div class="card-titlebar"><h2>🤝 Cadastro de Cliente/Fornecedor</h2></div>
           <div class="card-body">
-            <div class="search-bar">
-              <input type="text" id="customerSearch" placeholder="Buscar por nome ou documento..." />
-              <button type="button" onclick="loadCustomers()">↻ Atualizar</button>
+
+            <div class="action-bar">
+              <button type="button" class="btn-action btn-action-new"     id="customerBtnNovo"      onclick="setCadastroMode('customer','novo')">➕ Novo</button>
+              <button type="button" class="btn-action btn-action-consult" id="customerBtnConsultar" onclick="setCadastroMode('customer','consultar')">🔍 Consultar</button>
+              <button type="button" class="btn-action btn-action-edit"    id="customerBtnAlterar"   onclick="setCadastroMode('customer','alterar')">✏️ Alterar</button>
+              <button type="button" class="btn-action btn-action-delete"  id="customerBtnExcluir"   onclick="setCadastroMode('customer','excluir')">🗑️ Excluir</button>
+              <button type="button" class="btn-action btn-action-audit"   onclick="toggleAudit('customer')">📋 Histórico</button>
             </div>
-            <ul id="customers"></ul>
-            <h3>Novo Cliente/Fornecedor</h3>
+
             <div id="customerMessage" class="message" style="display:none"></div>
-            <form id="customerForm">
-              <label>Nome: *<input type="text" id="customerName" required /><span class="field-error">Campo obrigatório.</span></label>
-              <label>CPF/CNPJ:<input type="text" id="customerDocument" /><span class="field-error">CPF ou CNPJ inválido.</span></label>
-              <label>E-mail:<input type="email" id="customerEmail" /><span class="field-error">E-mail inválido.</span></label>
-              <label>Telefone:<input type="text" id="customerPhone" /></label>
-              <label>Tipo:
-                <select id="customerIsSupplier">
-                  <option value="false">Cliente</option>
-                  <option value="true">Fornecedor</option>
-                </select>
-              </label>
-              <button type="submit" class="btn-primary">💾 Salvar</button>
-            </form>
+            <div id="customerModeInfo" class="mode-info" style="display:none"></div>
+
+            <div id="customerListPanel" style="display:none">
+              <div class="search-bar">
+                <input type="text" id="customerSearch" placeholder="Buscar por nome ou documento..." />
+                <button type="button" onclick="loadCustomers()">↻ Atualizar</button>
+              </div>
+              <ul id="customers"></ul>
+            </div>
+
+            <div id="customerFormPanel" style="display:none">
+              <form id="customerForm">
+                <div class="form-grid-2">
+                  <label>Nome: *<input type="text" id="customerName" required /><span class="field-error">Campo obrigatório.</span></label>
+                  <label>CPF/CNPJ:<input type="text" id="customerDocument" /><span class="field-error">CPF ou CNPJ inválido.</span></label>
+                  <label>E-mail:<input type="email" id="customerEmail" /><span class="field-error">E-mail inválido.</span></label>
+                  <label>Telefone:<input type="text" id="customerPhone" /></label>
+                  <label>Tipo:
+                    <select id="customerIsSupplier">
+                      <option value="false">Cliente</option>
+                      <option value="true">Fornecedor</option>
+                    </select>
+                  </label>
+                </div>
+                <div class="form-actions">
+                  <button type="submit" class="btn-primary" id="customerSubmitBtn">💾 Salvar</button>
+                  <button type="button" onclick="setCadastroMode('customer','consultar')">Cancelar</button>
+                </div>
+              </form>
+            </div>
+
+            <div id="customerAuditPanel" class="audit-panel" style="display:none">
+              <div class="audit-panel-header">
+                <strong>📋 Histórico de Ações — Cliente/Fornecedor</strong>
+                <button type="button" class="btn-sm" onclick="toggleAudit('customer')">✕ Fechar</button>
+              </div>
+              <div class="audit-table-wrap">
+                <table class="audit-table">
+                  <thead><tr><th>Usuário</th><th>Atividade realizada</th><th>Empresa / Registro</th><th>Data e hora</th></tr></thead>
+                  <tbody id="customerAuditBody"></tbody>
+                </table>
+              </div>
+            </div>
+
           </div>
         </div>
       </section>
@@ -131,28 +193,62 @@
         <div class="card">
           <div class="card-titlebar"><h2>👤 Cadastro de Usuário</h2></div>
           <div class="card-body">
-            <div class="search-bar">
-              <input type="text" id="userSearch" placeholder="Buscar por login ou nome..." />
-              <button type="button" onclick="loadUsers()">↻ Atualizar</button>
+
+            <div class="action-bar">
+              <button type="button" class="btn-action btn-action-new"     id="userBtnNovo"      onclick="setCadastroMode('user','novo')">➕ Novo</button>
+              <button type="button" class="btn-action btn-action-consult" id="userBtnConsultar" onclick="setCadastroMode('user','consultar')">🔍 Consultar</button>
+              <button type="button" class="btn-action btn-action-edit"    id="userBtnAlterar"   onclick="setCadastroMode('user','alterar')">✏️ Alterar</button>
+              <button type="button" class="btn-action btn-action-delete"  id="userBtnExcluir"   onclick="setCadastroMode('user','excluir')">🗑️ Excluir</button>
+              <button type="button" class="btn-action btn-action-audit"   onclick="toggleAudit('user')">📋 Histórico</button>
             </div>
-            <ul id="users"></ul>
-            <h3>Novo Usuário</h3>
+
             <div id="userMessage" class="message" style="display:none"></div>
-            <form id="userForm">
-              <label>Login: *<input type="text" id="userUsername" required /><span class="field-error">Campo obrigatório.</span></label>
-              <label>Senha: *<input type="password" id="userPassword" required /><span class="field-error">Campo obrigatório.</span></label>
-              <label>Nome Completo:<input type="text" id="userFullName" /></label>
-              <label>E-mail:<input type="email" id="userEmail" /><span class="field-error">E-mail inválido.</span></label>
-              <label>Perfil:
-                <select id="userRole">
-                  <option value="Master">Master</option>
-                  <option value="Admin">Admin</option>
-                  <option value="User">User</option>
-                  <option value="Viewer">Viewer</option>
-                </select>
-              </label>
-              <button type="submit" class="btn-primary">💾 Salvar Usuário</button>
-            </form>
+            <div id="userModeInfo" class="mode-info" style="display:none"></div>
+
+            <div id="userListPanel" style="display:none">
+              <div class="search-bar">
+                <input type="text" id="userSearch" placeholder="Buscar por login ou nome..." />
+                <button type="button" onclick="loadUsers()">↻ Atualizar</button>
+              </div>
+              <ul id="users"></ul>
+            </div>
+
+            <div id="userFormPanel" style="display:none">
+              <form id="userForm">
+                <div class="form-grid-2">
+                  <label>Login: *<input type="text" id="userUsername" required /><span class="field-error">Campo obrigatório.</span></label>
+                  <label id="userPasswordLabel">Senha: *<input type="password" id="userPassword" /><span class="field-error">Campo obrigatório.</span></label>
+                  <label>Nome Completo:<input type="text" id="userFullName" /></label>
+                  <label>E-mail:<input type="email" id="userEmail" /><span class="field-error">E-mail inválido.</span></label>
+                  <label>Perfil:
+                    <select id="userRole">
+                      <option value="Master">Master</option>
+                      <option value="Admin">Admin</option>
+                      <option value="User">User</option>
+                      <option value="Viewer">Viewer</option>
+                    </select>
+                  </label>
+                </div>
+                <div class="form-actions">
+                  <button type="submit" class="btn-primary" id="userSubmitBtn">💾 Salvar Usuário</button>
+                  <button type="button" onclick="setCadastroMode('user','consultar')">Cancelar</button>
+                </div>
+              </form>
+            </div>
+
+            <div id="userAuditPanel" class="audit-panel" style="display:none">
+              <div class="audit-panel-header">
+                <strong>📋 Histórico de Ações — Usuário</strong>
+                <button type="button" class="btn-sm" onclick="toggleAudit('user')">✕ Fechar</button>
+              </div>
+              <div class="audit-table-wrap">
+                <table class="audit-table">
+                  <thead><tr><th>Usuário</th><th>Atividade realizada</th><th>Empresa / Registro</th><th>Data e hora</th></tr></thead>
+                  <tbody id="userAuditBody"></tbody>
+                </table>
+              </div>
+            </div>
+
           </div>
         </div>
       </section>
@@ -162,33 +258,68 @@
         <div class="card">
           <div class="card-titlebar"><h2>📋 Plano de Contas</h2></div>
           <div class="card-body">
-            <div class="search-bar">
-              <input type="text" id="planSearch" placeholder="Buscar por código ou nome..." />
-              <button type="button" onclick="loadAccountPlans()">↻ Atualizar</button>
+
+            <div class="action-bar">
+              <button type="button" class="btn-action btn-action-new"     id="accountplanBtnNovo"      onclick="setCadastroMode('accountplan','novo')">➕ Novo</button>
+              <button type="button" class="btn-action btn-action-consult" id="accountplanBtnConsultar" onclick="setCadastroMode('accountplan','consultar')">🔍 Consultar</button>
+              <button type="button" class="btn-action btn-action-edit"    id="accountplanBtnAlterar"   onclick="setCadastroMode('accountplan','alterar')">✏️ Alterar</button>
+              <button type="button" class="btn-action btn-action-delete"  id="accountplanBtnExcluir"   onclick="setCadastroMode('accountplan','excluir')">🗑️ Excluir</button>
+              <button type="button" class="btn-action btn-action-audit"   onclick="toggleAudit('accountplan')">📋 Histórico</button>
             </div>
-            <ul id="accountPlans"></ul>
-            <h3>Novo Plano</h3>
+
+            <div id="accountPlanMessage" class="message" style="display:none"></div>
+            <div id="accountplanModeInfo" class="mode-info" style="display:none"></div>
+
             <div class="warning" id="accountPlanWarning">
               Apenas o perfil <strong>Master</strong> pode criar, editar ou excluir planos de contas.
             </div>
-            <div id="accountPlanMessage" class="message" style="display:none"></div>
-            <form id="accountPlanForm">
-              <label>Código: *<input type="text" id="planCode" required placeholder="Ex: 1, 1.1, 2.1" /><span class="field-error">Campo obrigatório.</span></label>
-              <label>Nome: *<input type="text" id="planName" required /><span class="field-error">Campo obrigatório.</span></label>
-              <label>Tipo:
-                <select id="planType">
-                  <option value="Receita">Receita</option>
-                  <option value="Despesa">Despesa</option>
-                </select>
-              </label>
-              <label>Natureza:
-                <select id="planNature">
-                  <option value="Analítica">Analítica — recebe lançamentos</option>
-                  <option value="Sintética">Sintética — apenas agrupadora</option>
-                </select>
-              </label>
-              <button type="submit" class="btn-primary">💾 Salvar Plano</button>
-            </form>
+
+            <div id="accountplanListPanel" style="display:none">
+              <div class="search-bar">
+                <input type="text" id="planSearch" placeholder="Buscar por código ou nome..." />
+                <button type="button" onclick="loadAccountPlans()">↻ Atualizar</button>
+              </div>
+              <ul id="accountPlans"></ul>
+            </div>
+
+            <div id="accountplanFormPanel" style="display:none">
+              <form id="accountPlanForm">
+                <div class="form-grid-2">
+                  <label>Código: *<input type="text" id="planCode" required placeholder="Ex: 1, 1.1, 2.1" /><span class="field-error">Campo obrigatório.</span></label>
+                  <label>Nome: *<input type="text" id="planName" required /><span class="field-error">Campo obrigatório.</span></label>
+                  <label>Tipo:
+                    <select id="planType">
+                      <option value="Receita">Receita</option>
+                      <option value="Despesa">Despesa</option>
+                    </select>
+                  </label>
+                  <label>Natureza:
+                    <select id="planNature">
+                      <option value="Analítica">Analítica — recebe lançamentos</option>
+                      <option value="Sintética">Sintética — apenas agrupadora</option>
+                    </select>
+                  </label>
+                </div>
+                <div class="form-actions">
+                  <button type="submit" class="btn-primary" id="accountplanSubmitBtn">💾 Salvar Plano</button>
+                  <button type="button" onclick="setCadastroMode('accountplan','consultar')">Cancelar</button>
+                </div>
+              </form>
+            </div>
+
+            <div id="accountplanAuditPanel" class="audit-panel" style="display:none">
+              <div class="audit-panel-header">
+                <strong>📋 Histórico de Ações — Plano de Contas</strong>
+                <button type="button" class="btn-sm" onclick="toggleAudit('accountplan')">✕ Fechar</button>
+              </div>
+              <div class="audit-table-wrap">
+                <table class="audit-table">
+                  <thead><tr><th>Usuário</th><th>Atividade realizada</th><th>Empresa / Registro</th><th>Data e hora</th></tr></thead>
+                  <tbody id="accountplanAuditBody"></tbody>
+                </table>
+              </div>
+            </div>
+
           </div>
         </div>
       </section>

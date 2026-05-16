@@ -530,9 +530,147 @@ fieldset label { display: inline-flex; align-items: center; gap: 0.3rem; margin-
 ::-webkit-scrollbar-thumb { background: #C0C0C0; border-radius: 1px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--office-blue); }
 
+/* ── Action bar ──────────────────────────────────────────────────────────────── */
+.action-bar {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.8rem;
+  padding-bottom: 0.6rem;
+  border-bottom: 1px solid var(--border-lite);
+}
+
+.btn-action {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.32rem 0.75rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  cursor: pointer;
+  transition: background var(--transition), border-color var(--transition), color var(--transition);
+}
+
+.btn-action:hover:not(:disabled) {
+  background: var(--office-blue-lite);
+  border-color: var(--office-accent);
+  color: var(--office-blue);
+}
+
+.btn-action.active {
+  background: var(--office-blue);
+  color: var(--text-white);
+  border-color: var(--office-blue-dark);
+}
+
+.btn-action-new:hover:not(:disabled),
+.btn-action-new.active { background: var(--office-blue); color: #fff; border-color: var(--office-blue-dark); }
+
+.btn-action-edit:hover:not(:disabled),
+.btn-action-edit.active { background: #FEF9E7; color: var(--warn); border-color: var(--warn); }
+
+.btn-action-delete:hover:not(:disabled),
+.btn-action-delete.active { background: #FDECEA; color: var(--danger); border-color: var(--danger); }
+
+.btn-action-audit:hover:not(:disabled),
+.btn-action-audit.active { background: #EEF2FF; color: #3B48B5; border-color: #9AA4E0; }
+
+/* ── Mode info strip ─────────────────────────────────────────────────────────── */
+.mode-info {
+  background: var(--office-blue-lite);
+  border-left: 3px solid var(--office-blue);
+  padding: 0.35rem 0.7rem;
+  font-size: 0.8rem;
+  color: var(--office-blue);
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  border-radius: 0 var(--radius) var(--radius) 0;
+}
+
+/* ── Form grid ───────────────────────────────────────────────────────────────── */
+.form-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.4rem 1rem;
+  margin-bottom: 0.4rem;
+}
+
+.form-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--border-lite);
+}
+
+/* ── Audit panel ─────────────────────────────────────────────────────────────── */
+.audit-panel {
+  margin-top: 1rem;
+  border: 1px solid var(--border);
+  border-top: 3px solid #3B48B5;
+  background: var(--surface);
+}
+
+.audit-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.45rem 0.8rem;
+  background: #F0F3FF;
+  border-bottom: 1px solid #D0D6EE;
+  font-size: 0.82rem;
+}
+
+.audit-table-wrap { overflow-x: auto; }
+
+.audit-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+
+.audit-table th {
+  background: var(--office-blue);
+  color: #fff;
+  padding: 0.35rem 0.7rem;
+  text-align: left;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.audit-table td {
+  padding: 0.32rem 0.7rem;
+  border-bottom: 1px solid var(--border-lite);
+  white-space: nowrap;
+}
+
+.audit-table tr:hover td { background: var(--office-blue-lite); }
+
+.audit-empty {
+  text-align: center;
+  color: var(--text-muted);
+  padding: 1rem !important;
+  white-space: normal !important;
+}
+
+/* ── Selectable list items ───────────────────────────────────────────────────── */
+li.selectable { cursor: pointer; }
+li.selectable:hover { background: var(--office-blue-lite); }
+li.selected {
+  background: #D0E4F7 !important;
+  border-color: var(--office-accent) !important;
+  outline: 1px solid var(--office-accent);
+}
+
 /* ── Responsive ──────────────────────────────────────────────────────────────── */
 @media (max-width: 640px) {
   .app-content { padding: 0.75rem; }
   .tab { padding: 0 0.6rem; font-size: 0.78rem; }
   .app-title small { display: none; }
+  .form-grid-2 { grid-template-columns: 1fr; }
+  .action-bar { gap: 0.25rem; }
+  .btn-action { padding: 0.28rem 0.5rem; font-size: 0.75rem; }
 }

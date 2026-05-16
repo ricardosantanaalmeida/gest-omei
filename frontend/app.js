@@ -59,11 +59,8 @@ function validarEmail(email) {
 }
 
 function setFieldValidity(inputEl, valid) {
-  if (valid) {
-    inputEl.classList.remove("invalid");
-  } else {
-    inputEl.classList.add("invalid");
-  }
+  if (valid) inputEl.classList.remove("invalid");
+  else       inputEl.classList.add("invalid");
   return valid;
 }
 
@@ -89,6 +86,11 @@ function readFileAsBase64(file) {
   });
 }
 
+function fmtDateTime(dt) {
+  const d = new Date(dt);
+  return d.toLocaleDateString("pt-BR") + " " + d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+}
+
 // ── Modal ────────────────────────────────────────────────────────────────────
 
 function openModal(title, bodyHtml, onSave) {
@@ -106,6 +108,187 @@ document.getElementById("editModal").addEventListener("click", (e) => {
   if (e.target === document.getElementById("editModal")) closeModal();
 });
 
+// ── Modo de operação por cadastro ─────────────────────────────────────────────
+// mode: 'consultar' | 'novo' | 'alterar' | 'excluir'
+// selectedItem: registro atualmente selecionado na lista
+
+const cadastroState = {
+  company:     { mode: "consultar", selectedItem: null, editingId: null },
+  customer:    { mode: "consultar", selectedItem: null, editingId: null },
+  user:        { mode: "consultar", selectedItem: null, editingId: null },
+  accountplan: { mode: "consultar", selectedItem: null, editingId: null },
+};
+
+const modeLabels = {
+  consultar: "🔍 Modo Consultar — clique em um registro para visualizar.",
+  novo:      "➕ Modo Novo — preencha o formulário e clique em Salvar.",
+  alterar:   "✏️ Modo Alterar — selecione um registro na lista para editar.",
+  excluir:   "🗑️ Modo Excluir — selecione um registro na lista para excluir.",
+};
+
+function setCadastroMode(key, mode) {
+  const state = cadastroState[key];
+  state.mode = mode;
+  state.selectedItem = null;
+  state.editingId = null;
+
+  const prefix = key === "accountplan" ? "accountplan" : key;
+  const msgKey = key === "accountplan" ? "accountPlanMessage" : `${key}Message`;
+
+  // Atualiza botões ativos
+  ["novo","consultar","alterar","excluir"].forEach(m => {
+    const btn = document.getElementById(`${prefix}Btn${m.charAt(0).toUpperCase() + m.slice(1)}`);
+    if (btn) btn.classList.toggle("active", m === mode);
+  });
+
+  // Info de modo
+  const infoEl = document.getElementById(`${prefix}ModeInfo`);
+  if (infoEl) {
+    infoEl.textContent = modeLabels[mode] || "";
+    infoEl.style.display = "block";
+  }
+
+  // Painéis
+  const listPanel = document.getElementById(`${prefix}ListPanel`);
+  const formPanel = document.getElementById(`${prefix}FormPanel`);
+
+  const showList = mode !== "novo";
+  const showForm = mode === "novo";
+
+  if (listPanel) listPanel.style.display = showList ? "block" : "none";
+  if (formPanel) {
+    formPanel.style.display = showForm ? "block" : "none";
+    if (showForm) resetForm(key);
+  }
+
+  if (showList) {
+    const loader = pageLoaders[key];
+    if (loader) loader().catch(() => {});
+  }
+
+  // Ajuste de label da senha ao entrar em novo
+  if (key === "user") {
+    const lbl = document.getElementById("userPasswordLabel");
+    if (lbl) lbl.firstChild.textContent = mode === "novo" ? "Senha: * " : "Nova Senha: ";
+    const passEl = document.getElementById("userPassword");
+    if (passEl) passEl.required = mode === "novo";
+  }
+}
+
+function resetForm(key) {
+  const formIds = {
+    company:     "companyForm",
+    customer:    "customerForm",
+    user:        "userForm",
+    accountplan: "accountPlanForm",
+  };
+  const form = document.getElementById(formIds[key]);
+  if (form) form.reset();
+  if (key === "company") {
+    document.querySelectorAll("input[name='companyTipoAtividade']").forEach(el => el.checked = false);
+  }
+}
+
+// Tornar item selecionável na lista
+function makeSelectable(li, item, key) {
+  li.classList.add("selectable");
+  li.addEventListener("click", (e) => {
+    if (e.target.closest("button")) return;
+    const state = cadastroState[key];
+    const mode  = state.mode;
+
+    if (mode === "alterar") {
+      state.selectedItem = item;
+      state.editingId = item.id;
+      // Desmarca outros
+      document.querySelectorAll(`#${key === "accountplan" ? "accountPlans" : key + "s"} li`).forEach(l => l.classList.remove("selected"));
+      li.classList.add("selected");
+      openEditForm(key, item);
+    } else if (mode === "excluir") {
+      state.selectedItem = item;
+      document.querySelectorAll(`#${key === "accountplan" ? "accountPlans" : key + "s"} li`).forEach(l => l.classList.remove("selected"));
+      li.classList.add("selected");
+      handleExcluir(key, item);
+    }
+  });
+}
+
+function openEditForm(key, item) {
+  const prefix = key === "accountplan" ? "accountplan" : key;
+  const formPanel = document.getElementById(`${prefix}FormPanel`);
+  if (!formPanel) return;
+  formPanel.style.display = "block";
+
+  if (key === "company") fillCompanyForm(item);
+  else if (key === "customer") fillCustomerForm(item);
+  else if (key === "user") fillUserForm(item);
+  else if (key === "accountplan") fillAccountPlanForm(item);
+
+  const infoEl = document.getElementById(`${prefix}ModeInfo`);
+  if (infoEl) infoEl.textContent = `✏️ Editando: ${item.name || item.username || item.code || ""}`;
+
+  const submitBtn = document.getElementById(`${prefix}SubmitBtn`) || document.getElementById(`${key}SubmitBtn`);
+  if (submitBtn) submitBtn.textContent = "💾 Salvar Alteração";
+}
+
+async function handleExcluir(key, item) {
+  const name = item.name || item.username || item.code || String(item.id);
+  const entityLabel = { company: "empresa", customer: "cliente/fornecedor", user: "usuário", accountplan: "plano de contas" }[key];
+  if (!confirm(`Excluir ${entityLabel} "${name}"? Esta ação não pode ser desfeita.`)) {
+    cadastroState[key].selectedItem = null;
+    const listEl = document.getElementById(key === "accountplan" ? "accountPlans" : key + "s");
+    listEl?.querySelectorAll("li").forEach(l => l.classList.remove("selected"));
+    return;
+  }
+  const delFns = { company: deleteCompany, customer: deleteCustomer, user: deleteUser, accountplan: deleteAccountPlan };
+  await delFns[key](item.id, name);
+  setCadastroMode(key, "excluir");
+}
+
+// ── Auditoria ─────────────────────────────────────────────────────────────────
+
+const auditEntityMap = {
+  company:     "Empresa",
+  customer:    "Cliente/Fornecedor",
+  user:        "Usuário",
+  accountplan: "Plano de Contas",
+};
+
+async function toggleAudit(key) {
+  const prefix = key === "accountplan" ? "accountplan" : key;
+  const panel = document.getElementById(`${prefix}AuditPanel`);
+  if (!panel) return;
+  const isVisible = panel.style.display !== "none";
+  panel.style.display = isVisible ? "none" : "block";
+  if (!isVisible) await loadAuditLog(key);
+}
+
+async function loadAuditLog(key) {
+  const prefix = key === "accountplan" ? "accountplan" : key;
+  const tbody = document.getElementById(`${prefix}AuditBody`);
+  if (!tbody) return;
+
+  const entity = encodeURIComponent(auditEntityMap[key]);
+  const res = await fetch(`${apiBase}/api/auditlogs?entity=${entity}&limit=100`, { headers: getRoleHeader() });
+  if (!res.ok) {
+    tbody.innerHTML = `<tr><td colspan="4" class="audit-empty">Erro ao carregar histórico.</td></tr>`;
+    return;
+  }
+  const data = await res.json();
+  if (data.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="4" class="audit-empty">Nenhuma ação registrada.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = data.map(r => `
+    <tr>
+      <td>${r.username}</td>
+      <td>${r.activity}</td>
+      <td>${r.entityName || r.company || "—"}</td>
+      <td>${fmtDateTime(r.dateTime)}</td>
+    </tr>
+  `).join("");
+}
+
 // ── EMPRESA ──────────────────────────────────────────────────────────────────
 
 async function loadCompanies() {
@@ -120,6 +303,7 @@ async function loadCompanies() {
     !q || i.name.toLowerCase().includes(q) || (i.cnpj || "").toLowerCase().includes(q)
   );
 
+  const mode = cadastroState.company.mode;
   filtered.forEach((item) => {
     const li = document.createElement("li");
     const status = item.isActive ? "✅ Ativa" : "❌ Inativa";
@@ -129,35 +313,55 @@ async function loadCompanies() {
     `;
     const actions = li.querySelector(".item-actions");
 
-    if (canEdit()) {
-      const btnEdit = document.createElement("button");
-      btnEdit.className = "btn-edit btn-sm";
-      btnEdit.textContent = "✏️ Editar";
-      btnEdit.onclick = () => editCompany(item);
-      actions.appendChild(btnEdit);
+    if (mode === "consultar") {
+      if (canEdit()) {
+        const btnEdit = document.createElement("button");
+        btnEdit.className = "btn-edit btn-sm";
+        btnEdit.textContent = "✏️ Editar";
+        btnEdit.onclick = (e) => { e.stopPropagation(); setCadastroMode("company","alterar"); openEditForm("company", item); };
+        actions.appendChild(btnEdit);
+      }
+      if (isMasterRole()) {
+        const btnToggle = document.createElement("button");
+        btnToggle.className = "btn-sm";
+        btnToggle.textContent = item.isActive ? "🔴 Inativar" : "🟢 Reativar";
+        btnToggle.onclick = (e) => { e.stopPropagation(); changeCompanyActiveState(item.id, !item.isActive); };
+        actions.appendChild(btnToggle);
+
+        const btnDel = document.createElement("button");
+        btnDel.className = "btn-danger btn-sm";
+        btnDel.textContent = "🗑️";
+        btnDel.title = "Excluir";
+        btnDel.onclick = (e) => { e.stopPropagation(); deleteCompany(item.id, item.name); };
+        actions.appendChild(btnDel);
+      }
     }
 
-    if (isMasterRole()) {
-      const btnToggle = document.createElement("button");
-      btnToggle.className = "btn-sm";
-      btnToggle.textContent = item.isActive ? "🔴 Inativar" : "🟢 Reativar";
-      btnToggle.onclick = () => changeCompanyActiveState(item.id, !item.isActive);
-      actions.appendChild(btnToggle);
-
-      const btnDel = document.createElement("button");
-      btnDel.className = "btn-danger btn-sm";
-      btnDel.textContent = "🗑️";
-      btnDel.title = "Excluir";
-      btnDel.onclick = () => deleteCompany(item.id, item.name);
-      actions.appendChild(btnDel);
-    }
-
+    makeSelectable(li, item, "company");
     list.appendChild(li);
   });
 
   if (filtered.length === 0) {
     list.innerHTML = "<li style='color:#888; background:none; border:none;'>Nenhum registro encontrado.</li>";
   }
+}
+
+function fillCompanyForm(item) {
+  const f = (id, val) => { const el = document.getElementById(id); if (el) el.value = val ?? ""; };
+  f("companyName", item.name);
+  f("companyCnpj", item.cnpj);
+  f("companyAddress", item.address);
+  f("companyPhone", item.phone);
+  f("companyEmail", item.email);
+  f("companyInscricaoEstadual", item.inscricaoEstadual);
+  f("companyInscricaoMunicipal", item.inscricaoMunicipal);
+  f("companyResponsavel", item.responsavel);
+  f("companyDataAbertura", item.dataAbertura ? item.dataAbertura.substring(0,10) : "");
+  f("companyAtividadePrimaria", item.atividadePrimaria);
+  f("companyAtividadesSecundarias", item.atividadesSecundarias);
+  document.querySelectorAll("input[name='companyTipoAtividade']").forEach(el => {
+    el.checked = (item.tipoAtividade || "").includes(el.value);
+  });
 }
 
 async function createCompany(event) {
@@ -177,9 +381,11 @@ async function createCompany(event) {
   const logoFile = document.getElementById("companyLogo").files?.[0];
   const logoBase64 = logoFile ? await readFileAsBase64(logoFile) : "";
 
+  const state = cadastroState.company;
+  const isAlter = state.mode === "alterar" && state.editingId;
+
   const payload = {
-    name: nameEl.value,
-    cnpj: cnpjEl.value,
+    name: nameEl.value, cnpj: cnpjEl.value,
     address: document.getElementById("companyAddress").value,
     phone: document.getElementById("companyPhone").value,
     email: emailEl.value,
@@ -190,82 +396,34 @@ async function createCompany(event) {
     atividadePrimaria: document.getElementById("companyAtividadePrimaria").value,
     atividadesSecundarias: document.getElementById("companyAtividadesSecundarias").value,
     tipoAtividade: atividadeTipos,
-    logoBase64,
+    logoBase64: logoBase64 || (state.selectedItem?.logoBase64 ?? ""),
+    isActive: state.selectedItem?.isActive ?? true,
   };
 
-  const res = await fetch(`${apiBase}/api/companies`, {
-    method: "POST",
-    headers: { ...getRoleHeader(), "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
-
-  if (!res.ok) { showMessage("companyMessage", `Erro: ${res.status}`, true); return; }
-  showMessage("companyMessage", "Empresa cadastrada com sucesso!");
-  document.getElementById("companyForm").reset();
-  loadCompanies();
-}
-
-function editCompany(item) {
-  const tipoServico  = (item.tipoAtividade || "").includes("Servico")  ? "checked" : "";
-  const tipoComercio = (item.tipoAtividade || "").includes("Comercio") ? "checked" : "";
-  const tipoInd      = (item.tipoAtividade || "").includes("Industria") ? "checked" : "";
-  const dataVal      = item.dataAbertura ? item.dataAbertura.substring(0,10) : "";
-
-  openModal(`✏️ Editar Empresa — ${item.name}`, `
-    <label>Nome: *<input type="text" id="eCompanyName" value="${item.name}" /></label>
-    <label>CNPJ/CPF:<input type="text" id="eCompanyCnpj" value="${item.cnpj || ""}" /></label>
-    <label>Endereço:<input type="text" id="eCompanyAddress" value="${item.address || ""}" /></label>
-    <label>Telefone:<input type="text" id="eCompanyPhone" value="${item.phone || ""}" /></label>
-    <label>E-mail:<input type="email" id="eCompanyEmail" value="${item.email || ""}" /></label>
-    <label>Insc. Estadual:<input type="text" id="eCompanyIE" value="${item.inscricaoEstadual || ""}" /></label>
-    <label>Insc. Municipal:<input type="text" id="eCompanyIM" value="${item.inscricaoMunicipal || ""}" /></label>
-    <label>Responsável:<input type="text" id="eCompanyResp" value="${item.responsavel || ""}" /></label>
-    <label>Data de Abertura:<input type="date" id="eCompanyData" value="${dataVal}" /></label>
-    <label>Atividade Primária:<input type="text" id="eCompanyAP" value="${item.atividadePrimaria || ""}" /></label>
-    <label>Atividades Secundárias:<input type="text" id="eCompanyAS" value="${item.atividadesSecundarias || ""}" /></label>
-    <fieldset><legend>Tipo de Atividade</legend>
-      <label><input type="checkbox" name="eTipoAtividade" value="Servico" ${tipoServico} /> Serviço</label>
-      <label><input type="checkbox" name="eTipoAtividade" value="Comercio" ${tipoComercio} /> Comércio</label>
-      <label><input type="checkbox" name="eTipoAtividade" value="Industria" ${tipoInd} /> Indústria</label>
-    </fieldset>
-  `, async () => {
-    const tipoAtividade = Array.from(document.querySelectorAll("input[name='eTipoAtividade']:checked"))
-      .map(el => el.value).join(",");
-    const payload = {
-      id: item.id,
-      name: document.getElementById("eCompanyName").value,
-      cnpj: document.getElementById("eCompanyCnpj").value,
-      address: document.getElementById("eCompanyAddress").value,
-      phone: document.getElementById("eCompanyPhone").value,
-      email: document.getElementById("eCompanyEmail").value,
-      inscricaoEstadual: document.getElementById("eCompanyIE").value,
-      inscricaoMunicipal: document.getElementById("eCompanyIM").value,
-      responsavel: document.getElementById("eCompanyResp").value,
-      dataAbertura: document.getElementById("eCompanyData").value,
-      atividadePrimaria: document.getElementById("eCompanyAP").value,
-      atividadesSecundarias: document.getElementById("eCompanyAS").value,
-      tipoAtividade,
-      logoBase64: item.logoBase64 || "",
-      isActive: item.isActive,
-    };
-    const res = await fetch(`${apiBase}/api/companies/${item.id}`, {
+  let res;
+  if (isAlter) {
+    payload.id = state.editingId;
+    res = await fetch(`${apiBase}/api/companies/${state.editingId}`, {
       method: "PUT",
       headers: { ...getRoleHeader(), "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
-    if (!res.ok) { alert(`Erro ao salvar: ${res.status}`); return; }
-    closeModal();
-    showMessage("companyMessage", "Empresa atualizada com sucesso!");
-    loadCompanies();
-  });
+  } else {
+    res = await fetch(`${apiBase}/api/companies`, {
+      method: "POST",
+      headers: { ...getRoleHeader(), "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+  }
+
+  if (!res.ok) { showMessage("companyMessage", `Erro: ${res.status}`, true); return; }
+  showMessage("companyMessage", isAlter ? "Empresa atualizada com sucesso!" : "Empresa cadastrada com sucesso!");
+  setCadastroMode("company", "consultar");
 }
 
 async function deleteCompany(id, name) {
   if (!confirm(`Excluir empresa "${name}"? Esta ação não pode ser desfeita.`)) return;
-  const res = await fetch(`${apiBase}/api/companies/${id}`, {
-    method: "DELETE",
-    headers: getRoleHeader(),
-  });
+  const res = await fetch(`${apiBase}/api/companies/${id}`, { method: "DELETE", headers: getRoleHeader() });
   if (!res.ok) { showMessage("companyMessage", `Erro ao excluir: ${res.status}`, true); return; }
   showMessage("companyMessage", "Empresa excluída.");
   loadCompanies();
@@ -292,6 +450,7 @@ async function loadCustomers() {
     !q || i.name.toLowerCase().includes(q) || (i.document || "").toLowerCase().includes(q)
   );
 
+  const mode = cadastroState.customer.mode;
   filtered.forEach((item) => {
     const li = document.createElement("li");
     const tipo = item.isSupplier ? "Fornecedor" : "Cliente";
@@ -301,19 +460,21 @@ async function loadCustomers() {
     `;
     const actions = li.querySelector(".item-actions");
 
-    if (canEdit()) {
+    if (mode === "consultar" && canEdit()) {
       const btnEdit = document.createElement("button");
       btnEdit.className = "btn-edit btn-sm";
       btnEdit.textContent = "✏️ Editar";
-      btnEdit.onclick = () => editCustomer(item);
+      btnEdit.onclick = (e) => { e.stopPropagation(); setCadastroMode("customer","alterar"); openEditForm("customer", item); };
       actions.appendChild(btnEdit);
 
       const btnDel = document.createElement("button");
       btnDel.className = "btn-danger btn-sm";
       btnDel.textContent = "🗑️";
-      btnDel.onclick = () => deleteCustomer(item.id, item.name);
+      btnDel.onclick = (e) => { e.stopPropagation(); deleteCustomer(item.id, item.name); };
       actions.appendChild(btnDel);
     }
+
+    makeSelectable(li, item, "customer");
     list.appendChild(li);
   });
 
@@ -322,10 +483,18 @@ async function loadCustomers() {
   }
 }
 
+function fillCustomerForm(item) {
+  document.getElementById("customerName").value      = item.name || "";
+  document.getElementById("customerDocument").value  = item.document || "";
+  document.getElementById("customerEmail").value     = item.email || "";
+  document.getElementById("customerPhone").value     = item.phone || "";
+  document.getElementById("customerIsSupplier").value = item.isSupplier ? "true" : "false";
+}
+
 async function createCustomer(event) {
   event.preventDefault();
-  const nameEl = document.getElementById("customerName");
-  const docEl  = document.getElementById("customerDocument");
+  const nameEl  = document.getElementById("customerName");
+  const docEl   = document.getElementById("customerDocument");
   const emailEl = document.getElementById("customerEmail");
 
   let ok = true;
@@ -335,63 +504,34 @@ async function createCustomer(event) {
   if (!ok) return;
 
   const payload = {
-    name: nameEl.value,
-    document: docEl.value,
-    email: emailEl.value,
+    name: nameEl.value, document: docEl.value, email: emailEl.value,
     phone: document.getElementById("customerPhone").value,
     isSupplier: document.getElementById("customerIsSupplier").value === "true",
   };
 
-  const res = await fetch(`${apiBase}/api/customersuppliers`, {
-    method: "POST",
-    headers: { ...getRoleHeader(), "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
+  const state = cadastroState.customer;
+  const isAlter = state.mode === "alterar" && state.editingId;
+
+  let res;
+  if (isAlter) {
+    payload.id = state.editingId;
+    res = await fetch(`${apiBase}/api/customersuppliers/${state.editingId}`, {
+      method: "PUT", headers: { ...getRoleHeader(), "Content-Type": "application/json" }, body: JSON.stringify(payload),
+    });
+  } else {
+    res = await fetch(`${apiBase}/api/customersuppliers`, {
+      method: "POST", headers: { ...getRoleHeader(), "Content-Type": "application/json" }, body: JSON.stringify(payload),
+    });
+  }
 
   if (!res.ok) { showMessage("customerMessage", `Erro: ${res.status}`, true); return; }
-  showMessage("customerMessage", "Cadastro salvo com sucesso!");
-  document.getElementById("customerForm").reset();
-  loadCustomers();
-}
-
-function editCustomer(item) {
-  openModal(`✏️ Editar — ${item.name}`, `
-    <label>Nome: *<input type="text" id="eCustName" value="${item.name}" /></label>
-    <label>CPF/CNPJ:<input type="text" id="eCustDoc" value="${item.document || ""}" /></label>
-    <label>E-mail:<input type="email" id="eCustEmail" value="${item.email || ""}" /></label>
-    <label>Telefone:<input type="text" id="eCustPhone" value="${item.phone || ""}" /></label>
-    <label>Tipo:
-      <select id="eCustSupplier">
-        <option value="false" ${!item.isSupplier ? "selected" : ""}>Cliente</option>
-        <option value="true"  ${item.isSupplier  ? "selected" : ""}>Fornecedor</option>
-      </select>
-    </label>
-  `, async () => {
-    const payload = {
-      id: item.id,
-      name: document.getElementById("eCustName").value,
-      document: document.getElementById("eCustDoc").value,
-      email: document.getElementById("eCustEmail").value,
-      phone: document.getElementById("eCustPhone").value,
-      isSupplier: document.getElementById("eCustSupplier").value === "true",
-    };
-    const res = await fetch(`${apiBase}/api/customersuppliers/${item.id}`, {
-      method: "PUT",
-      headers: { ...getRoleHeader(), "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-    if (!res.ok) { alert(`Erro ao salvar: ${res.status}`); return; }
-    closeModal();
-    showMessage("customerMessage", "Atualizado com sucesso!");
-    loadCustomers();
-  });
+  showMessage("customerMessage", isAlter ? "Atualizado com sucesso!" : "Cadastro salvo com sucesso!");
+  setCadastroMode("customer", "consultar");
 }
 
 async function deleteCustomer(id, name) {
   if (!confirm(`Excluir "${name}"?`)) return;
-  const res = await fetch(`${apiBase}/api/customersuppliers/${id}`, {
-    method: "DELETE", headers: getRoleHeader(),
-  });
+  const res = await fetch(`${apiBase}/api/customersuppliers/${id}`, { method: "DELETE", headers: getRoleHeader() });
   if (!res.ok) { showMessage("customerMessage", `Erro: ${res.status}`, true); return; }
   showMessage("customerMessage", "Registro excluído.");
   loadCustomers();
@@ -411,6 +551,7 @@ async function loadUsers() {
     !q || i.username.toLowerCase().includes(q) || (i.fullName || "").toLowerCase().includes(q)
   );
 
+  const mode = cadastroState.user.mode;
   filtered.forEach((item) => {
     const li = document.createElement("li");
     li.innerHTML = `
@@ -419,21 +560,24 @@ async function loadUsers() {
     `;
     const actions = li.querySelector(".item-actions");
 
-    if (canEdit()) {
-      const btnEdit = document.createElement("button");
-      btnEdit.className = "btn-edit btn-sm";
-      btnEdit.textContent = "✏️ Editar";
-      btnEdit.onclick = () => editUser(item);
-      actions.appendChild(btnEdit);
+    if (mode === "consultar") {
+      if (canEdit()) {
+        const btnEdit = document.createElement("button");
+        btnEdit.className = "btn-edit btn-sm";
+        btnEdit.textContent = "✏️ Editar";
+        btnEdit.onclick = (e) => { e.stopPropagation(); setCadastroMode("user","alterar"); openEditForm("user", item); };
+        actions.appendChild(btnEdit);
+      }
+      if (isMasterRole()) {
+        const btnDel = document.createElement("button");
+        btnDel.className = "btn-danger btn-sm";
+        btnDel.textContent = "🗑️";
+        btnDel.onclick = (e) => { e.stopPropagation(); deleteUser(item.id, item.username); };
+        actions.appendChild(btnDel);
+      }
     }
 
-    if (isMasterRole()) {
-      const btnDel = document.createElement("button");
-      btnDel.className = "btn-danger btn-sm";
-      btnDel.textContent = "🗑️";
-      btnDel.onclick = () => deleteUser(item.id, item.username);
-      actions.appendChild(btnDel);
-    }
+    makeSelectable(li, item, "user");
     list.appendChild(li);
   });
 
@@ -442,78 +586,55 @@ async function loadUsers() {
   }
 }
 
+function fillUserForm(item) {
+  document.getElementById("userUsername").value = item.username || "";
+  document.getElementById("userPassword").value = "";
+  document.getElementById("userFullName").value  = item.fullName || "";
+  document.getElementById("userEmail").value     = item.email || "";
+  document.getElementById("userRole").value      = item.role || "User";
+}
+
 async function createUser(event) {
   event.preventDefault();
   const userEl  = document.getElementById("userUsername");
   const passEl  = document.getElementById("userPassword");
   const emailEl = document.getElementById("userEmail");
+  const state   = cadastroState.user;
+  const isAlter = state.mode === "alterar" && state.editingId;
 
   let ok = true;
   ok = setFieldValidity(userEl, userEl.value.trim() !== "") && ok;
-  ok = setFieldValidity(passEl, passEl.value.trim() !== "") && ok;
+  if (!isAlter) ok = setFieldValidity(passEl, passEl.value.trim() !== "") && ok;
   ok = setFieldValidity(emailEl, validarEmail(emailEl.value)) && ok;
   if (!ok) return;
 
   const payload = {
-    username: userEl.value,
-    password: passEl.value,
+    username: userEl.value, password: passEl.value,
     fullName: document.getElementById("userFullName").value,
     email: emailEl.value,
     role: document.getElementById("userRole").value,
   };
 
-  const res = await fetch(`${apiBase}/api/users`, {
-    method: "POST",
-    headers: { ...getRoleHeader(), "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
+  let res;
+  if (isAlter) {
+    payload.id = state.editingId;
+    res = await fetch(`${apiBase}/api/users/${state.editingId}`, {
+      method: "PUT", headers: { ...getRoleHeader(), "Content-Type": "application/json" }, body: JSON.stringify(payload),
+    });
+  } else {
+    res = await fetch(`${apiBase}/api/users`, {
+      method: "POST", headers: { ...getRoleHeader(), "Content-Type": "application/json" }, body: JSON.stringify(payload),
+    });
+  }
 
   if (!res.ok) { showMessage("userMessage", `Erro: ${res.status}`, true); return; }
-  showMessage("userMessage", "Usuário cadastrado com sucesso!");
-  document.getElementById("userForm").reset();
-  loadUsers();
-}
-
-function editUser(item) {
-  openModal(`✏️ Editar Usuário — ${item.username}`, `
-    <label>Login: *<input type="text" id="eUserUsername" value="${item.username}" /></label>
-    <label>Nova Senha: <small>(deixe em branco para não alterar)</small><input type="password" id="eUserPassword" /></label>
-    <label>Nome Completo:<input type="text" id="eUserFullName" value="${item.fullName || ""}" /></label>
-    <label>E-mail:<input type="email" id="eUserEmail" value="${item.email || ""}" /></label>
-    <label>Perfil:
-      <select id="eUserRole">
-        <option value="Master"  ${item.role === "Master"  ? "selected" : ""}>Master</option>
-        <option value="Admin"   ${item.role === "Admin"   ? "selected" : ""}>Admin</option>
-        <option value="User"    ${item.role === "User"    ? "selected" : ""}>User</option>
-        <option value="Viewer"  ${item.role === "Viewer"  ? "selected" : ""}>Viewer</option>
-      </select>
-    </label>
-  `, async () => {
-    const payload = {
-      id: item.id,
-      username: document.getElementById("eUserUsername").value,
-      password: document.getElementById("eUserPassword").value,
-      fullName: document.getElementById("eUserFullName").value,
-      email: document.getElementById("eUserEmail").value,
-      role: document.getElementById("eUserRole").value,
-    };
-    const res = await fetch(`${apiBase}/api/users/${item.id}`, {
-      method: "PUT",
-      headers: { ...getRoleHeader(), "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-    if (!res.ok) { alert(`Erro ao salvar: ${res.status}`); return; }
-    closeModal();
-    showMessage("userMessage", "Usuário atualizado com sucesso!");
-    loadUsers();
-  });
+  showMessage("userMessage", isAlter ? "Usuário atualizado com sucesso!" : "Usuário cadastrado com sucesso!");
+  setCadastroMode("user", "consultar");
 }
 
 async function deleteUser(id, username) {
   if (!confirm(`Excluir usuário "${username}"?`)) return;
-  const res = await fetch(`${apiBase}/api/users/${id}`, {
-    method: "DELETE", headers: getRoleHeader(),
-  });
+  const res = await fetch(`${apiBase}/api/users/${id}`, { method: "DELETE", headers: getRoleHeader() });
   if (!res.ok) { showMessage("userMessage", `Erro: ${res.status}`, true); return; }
   showMessage("userMessage", "Usuário excluído.");
   loadUsers();
@@ -522,19 +643,19 @@ async function deleteUser(id, username) {
 // ── PLANO DE CONTAS ────────────────────────────────────────────────────────────
 
 function createAccountItem(account) {
-  const level   = account.code.split(".").length - 1;
-  const isSint  = account.nature === "Sintética";
-  const li      = document.createElement("li");
+  const level  = account.code.split(".").length - 1;
+  const isSint = account.nature === "Sintética";
+  const li     = document.createElement("li");
   li.style.paddingLeft = `${Math.min(level, 3) * 16 + 8}px`;
   if (isSint) li.style.background = "#F5F8FF";
 
-  const typeTag    = account.type === "Receita"
+  const typeTag   = account.type === "Receita"
     ? `<span style="color:#217346;font-weight:700;font-size:0.72rem">▲ Receita</span>`
     : `<span style="color:#C0392B;font-weight:700;font-size:0.72rem">▼ Despesa</span>`;
-  const natureTag  = isSint
+  const natureTag = isSint
     ? `<span style="background:#E8F1FB;color:#2B579A;font-size:0.68rem;font-weight:700;padding:1px 5px;border-radius:2px">Sintética</span>`
     : `<span style="background:#DFF0D8;color:#217346;font-size:0.68rem;font-weight:700;padding:1px 5px;border-radius:2px">Analítica</span>`;
-  const codeStyle  = isSint ? "font-weight:700" : "color:#555";
+  const codeStyle = isSint ? "font-weight:700" : "color:#555";
 
   li.innerHTML = `
     <span class="item-text" style="${isSint ? "font-weight:600" : ""}">
@@ -545,22 +666,25 @@ function createAccountItem(account) {
     <span class="item-actions"></span>
   `;
   const actions = li.querySelector(".item-actions");
+  const mode = cadastroState.accountplan.mode;
 
-  if (canEditPlans()) {
+  if (mode === "consultar" && canEditPlans()) {
     const btnEdit = document.createElement("button");
     btnEdit.className = "btn-edit btn-sm";
     btnEdit.textContent = "✏️";
     btnEdit.title = "Editar";
-    btnEdit.onclick = () => editAccountPlan(account);
+    btnEdit.onclick = (e) => { e.stopPropagation(); setCadastroMode("accountplan","alterar"); openEditForm("accountplan", account); };
     actions.appendChild(btnEdit);
 
     const btnDel = document.createElement("button");
     btnDel.className = "btn-danger btn-sm";
     btnDel.textContent = "🗑️";
     btnDel.title = "Excluir";
-    btnDel.onclick = () => deleteAccountPlan(account.id, account.name);
+    btnDel.onclick = (e) => { e.stopPropagation(); deleteAccountPlan(account.id, account.name); };
     actions.appendChild(btnDel);
   }
+
+  makeSelectable(li, account, "accountplan");
   return li;
 }
 
@@ -582,6 +706,13 @@ async function loadAccountPlans() {
   }
 }
 
+function fillAccountPlanForm(item) {
+  document.getElementById("planCode").value   = item.code || "";
+  document.getElementById("planName").value   = item.name || "";
+  document.getElementById("planType").value   = item.type || "Receita";
+  document.getElementById("planNature").value = item.nature || "Analítica";
+}
+
 async function createAccountPlan(event) {
   event.preventDefault();
   const codeEl = document.getElementById("planCode");
@@ -593,65 +724,34 @@ async function createAccountPlan(event) {
   if (!ok) return;
 
   const payload = {
-    code: codeEl.value,
-    name: nameEl.value,
+    code: codeEl.value, name: nameEl.value,
     type: document.getElementById("planType").value,
     nature: document.getElementById("planNature").value,
   };
 
-  const res = await fetch(`${apiBase}/api/accountplans`, {
-    method: "POST",
-    headers: { ...getRoleHeader(), "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
+  const state = cadastroState.accountplan;
+  const isAlter = state.mode === "alterar" && state.editingId;
+
+  let res;
+  if (isAlter) {
+    payload.id = state.editingId;
+    res = await fetch(`${apiBase}/api/accountplans/${state.editingId}`, {
+      method: "PUT", headers: { ...getRoleHeader(), "Content-Type": "application/json" }, body: JSON.stringify(payload),
+    });
+  } else {
+    res = await fetch(`${apiBase}/api/accountplans`, {
+      method: "POST", headers: { ...getRoleHeader(), "Content-Type": "application/json" }, body: JSON.stringify(payload),
+    });
+  }
 
   if (!res.ok) { showMessage("accountPlanMessage", `Erro: ${res.status}`, true); return; }
-  showMessage("accountPlanMessage", "Plano cadastrado com sucesso!");
-  document.getElementById("accountPlanForm").reset();
-  loadAccountPlans();
-}
-
-function editAccountPlan(item) {
-  openModal(`✏️ Editar Plano — ${item.code}`, `
-    <label>Código: *<input type="text" id="ePlanCode" value="${item.code}" /></label>
-    <label>Nome: *<input type="text" id="ePlanName" value="${item.name}" /></label>
-    <label>Tipo:
-      <select id="ePlanType">
-        <option value="Receita" ${item.type === "Receita" ? "selected" : ""}>Receita</option>
-        <option value="Despesa" ${item.type === "Despesa" ? "selected" : ""}>Despesa</option>
-      </select>
-    </label>
-    <label>Natureza:
-      <select id="ePlanNature">
-        <option value="Analítica" ${(item.nature || "Analítica") === "Analítica" ? "selected" : ""}>Analítica — recebe lançamentos</option>
-        <option value="Sintética" ${item.nature === "Sintética" ? "selected" : ""}>Sintética — apenas agrupadora</option>
-      </select>
-    </label>
-  `, async () => {
-    const payload = {
-      id: item.id,
-      code: document.getElementById("ePlanCode").value,
-      name: document.getElementById("ePlanName").value,
-      type: document.getElementById("ePlanType").value,
-      nature: document.getElementById("ePlanNature").value,
-    };
-    const res = await fetch(`${apiBase}/api/accountplans/${item.id}`, {
-      method: "PUT",
-      headers: { ...getRoleHeader(), "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-    if (!res.ok) { alert(`Erro ao salvar: ${res.status}`); return; }
-    closeModal();
-    showMessage("accountPlanMessage", "Plano atualizado com sucesso!");
-    loadAccountPlans();
-  });
+  showMessage("accountPlanMessage", isAlter ? "Plano atualizado com sucesso!" : "Plano cadastrado com sucesso!");
+  setCadastroMode("accountplan", "consultar");
 }
 
 async function deleteAccountPlan(id, name) {
   if (!confirm(`Excluir plano "${name}"?`)) return;
-  const res = await fetch(`${apiBase}/api/accountplans/${id}`, {
-    method: "DELETE", headers: getRoleHeader(),
-  });
+  const res = await fetch(`${apiBase}/api/accountplans/${id}`, { method: "DELETE", headers: getRoleHeader() });
   if (!res.ok) { showMessage("accountPlanMessage", `Erro: ${res.status}`, true); return; }
   showMessage("accountPlanMessage", "Plano excluído.");
   loadAccountPlans();
@@ -674,34 +774,21 @@ async function updateRoleInfo() {
 
 function updateUiForRole() {
   const edit   = canEdit();
-  const master = isMasterRole();
   const plans  = canEditPlans();
 
-  const disable = (id) => { const el = document.getElementById(id); if (el) el.disabled = true; };
-  const enable  = (id) => { const el = document.getElementById(id); if (el) el.disabled = false; };
+  ["companyBtnNovo","companyBtnAlterar","companyBtnExcluir"].forEach(id => {
+    const el = document.getElementById(id); if (el) el.disabled = !edit;
+  });
+  ["customerBtnNovo","customerBtnAlterar","customerBtnExcluir"].forEach(id => {
+    const el = document.getElementById(id); if (el) el.disabled = !edit;
+  });
+  ["userBtnNovo","userBtnAlterar","userBtnExcluir"].forEach(id => {
+    const el = document.getElementById(id); if (el) el.disabled = !edit;
+  });
+  ["accountplanBtnNovo","accountplanBtnAlterar","accountplanBtnExcluir"].forEach(id => {
+    const el = document.getElementById(id); if (el) el.disabled = !plans;
+  });
 
-  const companyFields = ["companyName","companyCnpj","companyAddress","companyPhone","companyEmail",
-    "companyInscricaoEstadual","companyInscricaoMunicipal","companyResponsavel","companyDataAbertura",
-    "companyAtividadePrimaria","companyAtividadesSecundarias","companyLogo"];
-  companyFields.forEach(edit ? enable : disable);
-  document.querySelectorAll("input[name='companyTipoAtividade']").forEach(el => el.disabled = !edit);
-  const companyBtn = document.querySelector("#companyForm button[type=submit]");
-  if (companyBtn) companyBtn.disabled = !edit;
-
-  const customerFields = ["customerName","customerDocument","customerEmail","customerPhone","customerIsSupplier"];
-  customerFields.forEach(edit ? enable : disable);
-  const custBtn = document.querySelector("#customerForm button[type=submit]");
-  if (custBtn) custBtn.disabled = !edit;
-
-  const userFields = ["userUsername","userPassword","userFullName","userEmail","userRole"];
-  userFields.forEach(edit ? enable : disable);
-  const userBtn = document.querySelector("#userForm button[type=submit]");
-  if (userBtn) userBtn.disabled = !edit;
-
-  const planFields = ["planCode","planName","planType","planNature"];
-  planFields.forEach(plans ? enable : disable);
-  const planBtn = document.querySelector("#accountPlanForm button[type=submit]");
-  if (planBtn) planBtn.disabled = !plans;
   const planWarn = document.getElementById("accountPlanWarning");
   if (planWarn) planWarn.style.display = plans ? "none" : "block";
 
@@ -721,20 +808,13 @@ const pageLoaders = {
 
 function setActiveTab(pageId) {
   const isCadastro = cadastroPages.includes(pageId);
-
-  // Tabs principais
-  document.querySelectorAll(".tab-bar > .tab-item > .tab").forEach(tab => {
-    tab.classList.remove("active");
-  });
-
+  document.querySelectorAll(".tab-bar > .tab-item > .tab").forEach(tab => tab.classList.remove("active"));
   if (isCadastro) {
     document.getElementById("tabCadastroBtn").classList.add("active");
   } else {
     const tab = document.querySelector(`.tab[data-page="${pageId}"]`);
     if (tab) tab.classList.add("active");
   }
-
-  // Itens do dropdown Cadastro
   document.querySelectorAll("#tabCadastroMenu button").forEach(btn =>
     btn.classList.toggle("active", btn.dataset.page === pageId)
   );
@@ -746,7 +826,9 @@ function showPage(pageId) {
   );
   setActiveTab(pageId);
   closeCadastroMenu();
-  pageLoaders[pageId]?.().catch(() => {});
+  if (cadastroPages.includes(pageId)) {
+    setCadastroMode(pageId, cadastroState[pageId]?.mode || "consultar");
+  }
 }
 
 function closeCadastroMenu() {
@@ -765,27 +847,21 @@ document.getElementById("customerSearch").addEventListener("input", loadCustomer
 document.getElementById("userSearch").addEventListener("input", loadUsers);
 document.getElementById("planSearch").addEventListener("input", loadAccountPlans);
 
-// Botão "Cadastro" abre/fecha o dropdown
 document.getElementById("tabCadastroBtn").addEventListener("click", (e) => {
   e.stopPropagation();
   document.getElementById("tabCadastro").classList.toggle("open");
 });
 
-// Itens do dropdown Cadastro
 document.querySelectorAll("#tabCadastroMenu button[data-page]").forEach(btn =>
   btn.addEventListener("click", () => showPage(btn.dataset.page))
 );
 
-// Tabs diretas (Movimento, Relatório, Ajuda)
 document.querySelectorAll(".tab-bar > .tab-item > .tab[data-page]").forEach(btn =>
   btn.addEventListener("click", () => showPage(btn.dataset.page))
 );
 
-// Clique fora fecha o dropdown
 document.addEventListener("click", (e) => {
-  if (!document.getElementById("tabCadastro").contains(e.target)) {
-    closeCadastroMenu();
-  }
+  if (!document.getElementById("tabCadastro").contains(e.target)) closeCadastroMenu();
 });
 
 document.getElementById("role").addEventListener("change", () => {
