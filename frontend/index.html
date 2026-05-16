@@ -7,41 +7,60 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <div class="layout">
-    <aside class="sidebar">
-      <header>
-        <h1>Gest-Omei</h1>
-        <p>Gestão MEI</p>
-      </header>
-      <label style="padding:0.5rem 0.8rem 0; display:block;">
-        Perfil de acesso:
+  <div class="app">
+
+    <!-- ═══ HEADER (título + perfil) ═══ -->
+    <header class="app-header">
+      <div class="app-title">
+        📊 Gest-Omei
+        <small>Gestão MEI</small>
+      </div>
+      <div class="header-right">
+        Perfil:
         <select id="role">
           <option value="Master">Master</option>
           <option value="Admin">Admin</option>
           <option value="User">User</option>
           <option value="Viewer">Viewer</option>
         </select>
-      </label>
-      <nav class="main-nav">
-        <div class="nav-group">
-          <button type="button" class="nav-group-toggle" data-group="cadastro">Cadastro</button>
-          <div class="nav-group-items" data-group="cadastro">
-            <button type="button" data-page="company">🏢 Empresa</button>
-            <button type="button" data-page="user">👤 Usuário</button>
-            <button type="button" data-page="accountplan">📋 Plano de Contas</button>
-            <button type="button" data-page="customer">🤝 Cliente/Fornecedor</button>
-          </div>
+      </div>
+    </header>
+
+    <!-- ═══ TAB BAR (menu superior) ═══ -->
+    <nav class="tab-bar">
+
+      <!-- Cadastro (com dropdown) -->
+      <div class="tab-item" id="tabCadastro">
+        <button class="tab active" type="button" id="tabCadastroBtn">Cadastro ▾</button>
+        <div class="tab-dropdown" id="tabCadastroMenu">
+          <button type="button" data-page="company">🏢 Empresa</button>
+          <button type="button" data-page="user">👤 Usuário</button>
+          <button type="button" data-page="accountplan">📋 Plano de Contas</button>
+          <button type="button" data-page="customer">🤝 Cliente/Fornecedor</button>
         </div>
-        <button type="button" data-page="movimento">💰 Movimento</button>
-        <button type="button" data-page="relatorio">📊 Relatório</button>
-        <button type="button" data-page="ajuda">❓ Ajuda</button>
-      </nav>
-    </aside>
+      </div>
 
-    <main class="main">
-      <div id="roleInfo" class="message" style="display:none"></div>
+      <div class="tab-item">
+        <button class="tab" type="button" data-page="movimento">💰 Movimento</button>
+      </div>
 
-      <!-- ═══ EMPRESA ═══ -->
+      <div class="tab-item">
+        <button class="tab" type="button" data-page="relatorio">📊 Relatório</button>
+      </div>
+
+      <div class="tab-item">
+        <button class="tab" type="button" data-page="ajuda">❓ Ajuda</button>
+      </div>
+
+      <div class="tab-bar-right">
+        <div id="roleInfo"></div>
+      </div>
+    </nav>
+
+    <!-- ═══ CONTEÚDO ═══ -->
+    <main class="app-content">
+
+      <!-- ── EMPRESA ── -->
       <section id="page-company" class="page">
         <div class="card">
           <div class="card-titlebar"><h2>🏢 Cadastro de Empresa</h2></div>
@@ -78,7 +97,7 @@
         </div>
       </section>
 
-      <!-- ═══ CLIENTE/FORNECEDOR ═══ -->
+      <!-- ── CLIENTE/FORNECEDOR ── -->
       <section id="page-customer" class="page">
         <div class="card">
           <div class="card-titlebar"><h2>🤝 Cadastro de Cliente/Fornecedor</h2></div>
@@ -107,7 +126,7 @@
         </div>
       </section>
 
-      <!-- ═══ USUÁRIO ═══ -->
+      <!-- ── USUÁRIO ── -->
       <section id="page-user" class="page">
         <div class="card">
           <div class="card-titlebar"><h2>👤 Cadastro de Usuário</h2></div>
@@ -138,7 +157,7 @@
         </div>
       </section>
 
-      <!-- ═══ PLANO DE CONTAS ═══ -->
+      <!-- ── PLANO DE CONTAS ── -->
       <section id="page-accountplan" class="page">
         <div class="card">
           <div class="card-titlebar"><h2>📋 Plano de Contas</h2></div>
@@ -168,38 +187,39 @@
         </div>
       </section>
 
-      <!-- ═══ MOVIMENTO ═══ -->
+      <!-- ── MOVIMENTO ── -->
       <section id="page-movimento" class="page">
         <div class="card">
           <div class="card-titlebar"><h2>💰 Movimento</h2></div>
-          <div class="card-body"><p>Em desenvolvimento.</p></div>
+          <div class="card-body"><p style="color:var(--text-muted)">Em desenvolvimento.</p></div>
         </div>
       </section>
 
-      <!-- ═══ RELATÓRIO ═══ -->
+      <!-- ── RELATÓRIO ── -->
       <section id="page-relatorio" class="page">
         <div class="card">
           <div class="card-titlebar"><h2>📊 Relatório</h2></div>
-          <div class="card-body"><p>Em desenvolvimento.</p></div>
+          <div class="card-body"><p style="color:var(--text-muted)">Em desenvolvimento.</p></div>
         </div>
       </section>
 
-      <!-- ═══ AJUDA ═══ -->
+      <!-- ── AJUDA ── -->
       <section id="page-ajuda" class="page">
         <div class="card">
           <div class="card-titlebar"><h2>❓ Ajuda</h2></div>
           <div class="card-body">
-            <p>Use o menu à esquerda para navegar entre os módulos.</p>
+            <p>Use o menu superior para navegar entre os módulos.</p><br>
             <p><strong>Perfis de acesso:</strong></p>
-            <ul style="list-style:disc; padding-left:1.2rem;">
-              <li style="background:none; border:none; padding:0.1rem 0;">Master — acesso total</li>
-              <li style="background:none; border:none; padding:0.1rem 0;">Admin — criar/editar cadastros, sem alterar plano de contas</li>
-              <li style="background:none; border:none; padding:0.1rem 0;">User — somente visualização</li>
-              <li style="background:none; border:none; padding:0.1rem 0;">Viewer — somente visualização</li>
+            <ul style="padding-left:1rem; margin-top:0.5rem;">
+              <li style="background:none; border:none; padding:0.1rem 0; display:list-item;">Master — acesso total</li>
+              <li style="background:none; border:none; padding:0.1rem 0; display:list-item;">Admin — criar/editar cadastros, sem alterar plano de contas</li>
+              <li style="background:none; border:none; padding:0.1rem 0; display:list-item;">User — somente visualização</li>
+              <li style="background:none; border:none; padding:0.1rem 0; display:list-item;">Viewer — somente visualização</li>
             </ul>
           </div>
         </div>
       </section>
+
     </main>
   </div>
 

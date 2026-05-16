@@ -687,20 +687,7 @@ function updateUiForRole() {
 
 // ── Navegação ─────────────────────────────────────────────────────────────────
 
-function setActiveNav(pageId) {
-  document.querySelectorAll("nav button[data-page]").forEach(btn =>
-    btn.classList.toggle("active", btn.dataset.page === pageId)
-  );
-}
-
-function toggleGroup(groupName, pageId) {
-  const items = document.querySelector(`.nav-group-items[data-group="${groupName}"]`);
-  const group = items?.closest(".nav-group");
-  if (!group || !items) return;
-  const shouldOpen = ["company","user","accountplan","customer"].includes(pageId);
-  items.classList.toggle("open", shouldOpen);
-  group.classList.toggle("open", shouldOpen);
-}
+const cadastroPages = ["company", "user", "accountplan", "customer"];
 
 const pageLoaders = {
   company:     loadCompanies,
@@ -709,13 +696,38 @@ const pageLoaders = {
   accountplan: loadAccountPlans,
 };
 
+function setActiveTab(pageId) {
+  const isCadastro = cadastroPages.includes(pageId);
+
+  // Tabs principais
+  document.querySelectorAll(".tab-bar > .tab-item > .tab").forEach(tab => {
+    tab.classList.remove("active");
+  });
+
+  if (isCadastro) {
+    document.getElementById("tabCadastroBtn").classList.add("active");
+  } else {
+    const tab = document.querySelector(`.tab[data-page="${pageId}"]`);
+    if (tab) tab.classList.add("active");
+  }
+
+  // Itens do dropdown Cadastro
+  document.querySelectorAll("#tabCadastroMenu button").forEach(btn =>
+    btn.classList.toggle("active", btn.dataset.page === pageId)
+  );
+}
+
 function showPage(pageId) {
   document.querySelectorAll(".page").forEach(p =>
     p.classList.toggle("active", p.id === `page-${pageId}`)
   );
-  setActiveNav(pageId);
-  toggleGroup("cadastro", pageId);
+  setActiveTab(pageId);
+  closeCadastroMenu();
   pageLoaders[pageId]?.().catch(() => {});
+}
+
+function closeCadastroMenu() {
+  document.getElementById("tabCadastro").classList.remove("open");
 }
 
 // ── Event listeners ───────────────────────────────────────────────────────────
@@ -730,25 +742,33 @@ document.getElementById("customerSearch").addEventListener("input", loadCustomer
 document.getElementById("userSearch").addEventListener("input", loadUsers);
 document.getElementById("planSearch").addEventListener("input", loadAccountPlans);
 
-document.querySelectorAll("nav [data-page]").forEach(btn =>
+// Botão "Cadastro" abre/fecha o dropdown
+document.getElementById("tabCadastroBtn").addEventListener("click", (e) => {
+  e.stopPropagation();
+  document.getElementById("tabCadastro").classList.toggle("open");
+});
+
+// Itens do dropdown Cadastro
+document.querySelectorAll("#tabCadastroMenu button[data-page]").forEach(btn =>
   btn.addEventListener("click", () => showPage(btn.dataset.page))
 );
 
-document.querySelectorAll(".nav-group-toggle").forEach(toggle =>
-  toggle.addEventListener("click", () => {
-    const name  = toggle.dataset.group;
-    const items = document.querySelector(`.nav-group-items[data-group="${name}"]`);
-    const group = toggle.closest(".nav-group");
-    if (!items || !group) return;
-    const isOpen = items.classList.toggle("open");
-    group.classList.toggle("open", isOpen);
-  })
+// Tabs diretas (Movimento, Relatório, Ajuda)
+document.querySelectorAll(".tab-bar > .tab-item > .tab[data-page]").forEach(btn =>
+  btn.addEventListener("click", () => showPage(btn.dataset.page))
 );
+
+// Clique fora fecha o dropdown
+document.addEventListener("click", (e) => {
+  if (!document.getElementById("tabCadastro").contains(e.target)) {
+    closeCadastroMenu();
+  }
+});
 
 document.getElementById("role").addEventListener("change", () => {
   updateUiForRole();
-  const active = document.querySelector("nav button.active")?.dataset.page || "company";
-  showPage(active);
+  const activePage = document.querySelector(".page.active")?.id?.replace("page-", "") || "company";
+  showPage(activePage);
 });
 
 // ── Init ──────────────────────────────────────────────────────────────────────
