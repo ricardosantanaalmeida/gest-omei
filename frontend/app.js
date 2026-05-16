@@ -522,11 +522,26 @@ async function deleteUser(id, username) {
 // ── PLANO DE CONTAS ────────────────────────────────────────────────────────────
 
 function createAccountItem(account) {
-  const level = account.code.split(".").length - 1;
-  const li = document.createElement("li");
-  li.style.paddingLeft = `${Math.min(level, 2) * 18 + 8}px`;
+  const level   = account.code.split(".").length - 1;
+  const isSint  = account.nature === "Sintética";
+  const li      = document.createElement("li");
+  li.style.paddingLeft = `${Math.min(level, 3) * 16 + 8}px`;
+  if (isSint) li.style.background = "#F5F8FF";
+
+  const typeTag    = account.type === "Receita"
+    ? `<span style="color:#217346;font-weight:700;font-size:0.72rem">▲ Receita</span>`
+    : `<span style="color:#C0392B;font-weight:700;font-size:0.72rem">▼ Despesa</span>`;
+  const natureTag  = isSint
+    ? `<span style="background:#E8F1FB;color:#2B579A;font-size:0.68rem;font-weight:700;padding:1px 5px;border-radius:2px">Sintética</span>`
+    : `<span style="background:#DFF0D8;color:#217346;font-size:0.68rem;font-weight:700;padding:1px 5px;border-radius:2px">Analítica</span>`;
+  const codeStyle  = isSint ? "font-weight:700" : "color:#555";
+
   li.innerHTML = `
-    <span class="item-text">${account.code} — ${account.name} <em>(${account.type})</em></span>
+    <span class="item-text" style="${isSint ? "font-weight:600" : ""}">
+      <span style="${codeStyle}">${account.code}</span>
+      &nbsp;—&nbsp;${account.name}
+      &nbsp; ${typeTag} &nbsp; ${natureTag}
+    </span>
     <span class="item-actions"></span>
   `;
   const actions = li.querySelector(".item-actions");
@@ -581,6 +596,7 @@ async function createAccountPlan(event) {
     code: codeEl.value,
     name: nameEl.value,
     type: document.getElementById("planType").value,
+    nature: document.getElementById("planNature").value,
   };
 
   const res = await fetch(`${apiBase}/api/accountplans`, {
@@ -605,12 +621,19 @@ function editAccountPlan(item) {
         <option value="Despesa" ${item.type === "Despesa" ? "selected" : ""}>Despesa</option>
       </select>
     </label>
+    <label>Natureza:
+      <select id="ePlanNature">
+        <option value="Analítica" ${(item.nature || "Analítica") === "Analítica" ? "selected" : ""}>Analítica — recebe lançamentos</option>
+        <option value="Sintética" ${item.nature === "Sintética" ? "selected" : ""}>Sintética — apenas agrupadora</option>
+      </select>
+    </label>
   `, async () => {
     const payload = {
       id: item.id,
       code: document.getElementById("ePlanCode").value,
       name: document.getElementById("ePlanName").value,
       type: document.getElementById("ePlanType").value,
+      nature: document.getElementById("ePlanNature").value,
     };
     const res = await fetch(`${apiBase}/api/accountplans/${item.id}`, {
       method: "PUT",
@@ -675,7 +698,7 @@ function updateUiForRole() {
   const userBtn = document.querySelector("#userForm button[type=submit]");
   if (userBtn) userBtn.disabled = !edit;
 
-  const planFields = ["planCode","planName","planType"];
+  const planFields = ["planCode","planName","planType","planNature"];
   planFields.forEach(plans ? enable : disable);
   const planBtn = document.querySelector("#accountPlanForm button[type=submit]");
   if (planBtn) planBtn.disabled = !plans;
@@ -709,7 +732,8 @@ function _populateAccountPlanSelect(selectId) {
   if (!sel) return;
   const prev = sel.value;
   sel.innerHTML = '<option value="">— Selecione o Plano de Contas —</option>';
-  _accountPlanCache.forEach(p => {
+  // Apenas contas Analíticas recebem lançamentos
+  _accountPlanCache.filter(p => p.nature !== "Sintética").forEach(p => {
     const opt = document.createElement("option");
     opt.value = p.id;
     opt.dataset.type = p.type;
