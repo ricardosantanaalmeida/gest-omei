@@ -95,6 +95,65 @@ using (var scope = app.Services.CreateScope())
         if (!existingCodes.Contains(code))
             db.AccountPlans.Add(new AccountPlan { Code = code, Name = name, Type = type, Nature = nature });
     db.SaveChanges();
+
+    // Lançamentos de teste — gerados apenas se a tabela estiver vazia
+    if (!db.Transactions.Any())
+    {
+        var plans = db.AccountPlans.ToDictionary(p => p.Code);
+
+        Transaction Tx(DateTime date, string desc, decimal amount, TransactionType type, string planCode) =>
+            new Transaction
+            {
+                Date = date, Description = desc, Amount = amount, Type = type,
+                Category     = plans.TryGetValue(planCode, out var p) ? p.Name : planCode,
+                AccountPlanId   = plans.TryGetValue(planCode, out var p2) ? p2.Id   : null,
+                AccountPlanCode = plans.TryGetValue(planCode, out var p3) ? p3.Code : planCode,
+                AccountPlanName = plans.TryGetValue(planCode, out var p4) ? p4.Name : planCode,
+            };
+
+        db.Transactions.AddRange(
+            // ── Janeiro 2026 ──
+            Tx(new DateTime(2026,1,5),  "Consultoria em TI — Cliente A",        3500.00m, TransactionType.Income,  "1.1"),
+            Tx(new DateTime(2026,1,10), "Venda de equipamento",                  1200.00m, TransactionType.Income,  "1.2"),
+            Tx(new DateTime(2026,1,10), "Aluguel sala comercial",                 800.00m, TransactionType.Expense, "2.3.1"),
+            Tx(new DateTime(2026,1,15), "DAS Simples Nacional — Jan",              66.00m, TransactionType.Expense, "2.4.1"),
+            Tx(new DateTime(2026,1,20), "Telefone e Internet",                    120.00m, TransactionType.Expense, "2.3.3"),
+            Tx(new DateTime(2026,1,22), "Material de escritório",                  85.00m, TransactionType.Expense, "2.3.4"),
+
+            // ── Fevereiro 2026 ──
+            Tx(new DateTime(2026,2,3),  "Manutenção de sistemas — Cliente B",    2800.00m, TransactionType.Income,  "1.1"),
+            Tx(new DateTime(2026,2,7),  "Rendimento conta corrente",               45.00m, TransactionType.Income,  "1.5"),
+            Tx(new DateTime(2026,2,10), "Aluguel sala comercial",                 800.00m, TransactionType.Expense, "2.3.1"),
+            Tx(new DateTime(2026,2,15), "DAS Simples Nacional — Fev",              66.00m, TransactionType.Expense, "2.4.1"),
+            Tx(new DateTime(2026,2,18), "Água e energia elétrica",                180.00m, TransactionType.Expense, "2.3.2"),
+            Tx(new DateTime(2026,2,20), "Telefone e Internet",                    120.00m, TransactionType.Expense, "2.3.3"),
+
+            // ── Março 2026 ──
+            Tx(new DateTime(2026,3,4),  "Consultoria em TI — Cliente C",         4000.00m, TransactionType.Income,  "1.1"),
+            Tx(new DateTime(2026,3,8),  "Venda de produtos",                      950.00m, TransactionType.Income,  "1.2"),
+            Tx(new DateTime(2026,3,10), "Aluguel sala comercial",                 800.00m, TransactionType.Expense, "2.3.1"),
+            Tx(new DateTime(2026,3,15), "DAS Simples Nacional — Mar",              66.00m, TransactionType.Expense, "2.4.1"),
+            Tx(new DateTime(2026,3,18), "Compra de mercadorias para revenda",     420.00m, TransactionType.Expense, "2.2.1"),
+            Tx(new DateTime(2026,3,25), "Tarifas bancárias",                       35.00m, TransactionType.Expense, "2.5.2"),
+
+            // ── Abril 2026 ──
+            Tx(new DateTime(2026,4,2),  "Desenvolvimento de website — Cliente D", 3200.00m, TransactionType.Income,  "1.1"),
+            Tx(new DateTime(2026,4,10), "Aluguel sala comercial",                  800.00m, TransactionType.Expense, "2.3.1"),
+            Tx(new DateTime(2026,4,15), "DAS Simples Nacional — Abr",               66.00m, TransactionType.Expense, "2.4.1"),
+            Tx(new DateTime(2026,4,20), "Publicidade — redes sociais",             250.00m, TransactionType.Expense, "2.6"),
+            Tx(new DateTime(2026,4,22), "Telefone e Internet",                     120.00m, TransactionType.Expense, "2.3.3"),
+            Tx(new DateTime(2026,4,28), "Encargos sobre folha",                    210.00m, TransactionType.Expense, "2.1.2"),
+
+            // ── Maio 2026 ──
+            Tx(new DateTime(2026,5,5),  "Consultoria em TI — Cliente A",          3800.00m, TransactionType.Income,  "1.1"),
+            Tx(new DateTime(2026,5,6),  "Venda de serviços recorrentes",           600.00m, TransactionType.Income,  "1.1"),
+            Tx(new DateTime(2026,5,10), "Aluguel sala comercial",                  800.00m, TransactionType.Expense, "2.3.1"),
+            Tx(new DateTime(2026,5,15), "DAS Simples Nacional — Mai",               66.00m, TransactionType.Expense, "2.4.1"),
+            Tx(new DateTime(2026,5,16), "Material de escritório",                   55.00m, TransactionType.Expense, "2.3.4"),
+            Tx(new DateTime(2026,5,16), "Água e energia elétrica",                 175.00m, TransactionType.Expense, "2.3.2")
+        );
+        db.SaveChanges();
+    }
 }
 
 app.UseCors("LocalDev");
