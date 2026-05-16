@@ -17,4 +17,5 @@ public class AppDbContext : DbContext
     public DbSet<CustomerSupplier> CustomerSuppliers => Set<CustomerSupplier>();
     public DbSet<User> Users => Set<User>();
     public DbSet<AccountPlan> AccountPlans => Set<AccountPlan>();
+    public DbSet<Transaction> Transactions => Set<Transaction>();
 }
