@@ -44,41 +44,43 @@ using (var scope = app.Services.CreateScope())
         db.SaveChanges();
     }
 
-    // Plano de contas modelo MEI — verifica por código para não duplicar
-    var planSeed = new List<(string Code, string Name, string Type)>
+    // Plano de contas modelo MEI
+    // Sintética = agrupadora (não recebe lançamentos)
+    // Analítica  = operacional (recebe lançamentos)
+    var planSeed = new List<(string Code, string Name, string Type, string Nature)>
     {
-        ("1.0",   "Receitas",                        "Receita"),
-        ("1.1",   "Receitas de Serviços",             "Receita"),
-        ("1.2",   "Receitas de Vendas",               "Receita"),
-        ("1.3",   "Receitas Industriais",             "Receita"),
-        ("1.4",   "Outras Receitas Operacionais",     "Receita"),
-        ("1.5",   "Receitas Financeiras",             "Receita"),
-        ("2.0",   "Despesas",                         "Despesa"),
-        ("2.1",   "Despesas com Pessoal",             "Despesa"),
-        ("2.1.1", "Salários e Ordenados",             "Despesa"),
-        ("2.1.2", "Encargos Sociais",                 "Despesa"),
-        ("2.2",   "Despesas com Fornecedores",        "Despesa"),
-        ("2.2.1", "Compra de Mercadorias",            "Despesa"),
-        ("2.2.2", "Matéria-Prima",                    "Despesa"),
-        ("2.3",   "Despesas Administrativas",         "Despesa"),
-        ("2.3.1", "Aluguel",                          "Despesa"),
-        ("2.3.2", "Água e Energia Elétrica",          "Despesa"),
-        ("2.3.3", "Telefone e Internet",              "Despesa"),
-        ("2.3.4", "Material de Escritório",           "Despesa"),
-        ("2.4",   "Tributos e Impostos",              "Despesa"),
-        ("2.4.1", "DAS (Simples Nacional)",           "Despesa"),
-        ("2.4.2", "IPTU e Taxas Municipais",          "Despesa"),
-        ("2.5",   "Despesas Financeiras",             "Despesa"),
-        ("2.5.1", "Juros e Encargos",                 "Despesa"),
-        ("2.5.2", "Tarifas Bancárias",                "Despesa"),
-        ("2.6",   "Marketing e Publicidade",          "Despesa"),
-        ("2.7",   "Outras Despesas",                  "Despesa"),
+        ("1.0",   "Receitas",                        "Receita", "Sintética"),
+        ("1.1",   "Receitas de Serviços",             "Receita", "Analítica"),
+        ("1.2",   "Receitas de Vendas",               "Receita", "Analítica"),
+        ("1.3",   "Receitas Industriais",             "Receita", "Analítica"),
+        ("1.4",   "Outras Receitas Operacionais",     "Receita", "Analítica"),
+        ("1.5",   "Receitas Financeiras",             "Receita", "Analítica"),
+        ("2.0",   "Despesas",                         "Despesa", "Sintética"),
+        ("2.1",   "Despesas com Pessoal",             "Despesa", "Sintética"),
+        ("2.1.1", "Salários e Ordenados",             "Despesa", "Analítica"),
+        ("2.1.2", "Encargos Sociais",                 "Despesa", "Analítica"),
+        ("2.2",   "Despesas com Fornecedores",        "Despesa", "Sintética"),
+        ("2.2.1", "Compra de Mercadorias",            "Despesa", "Analítica"),
+        ("2.2.2", "Matéria-Prima",                    "Despesa", "Analítica"),
+        ("2.3",   "Despesas Administrativas",         "Despesa", "Sintética"),
+        ("2.3.1", "Aluguel",                          "Despesa", "Analítica"),
+        ("2.3.2", "Água e Energia Elétrica",          "Despesa", "Analítica"),
+        ("2.3.3", "Telefone e Internet",              "Despesa", "Analítica"),
+        ("2.3.4", "Material de Escritório",           "Despesa", "Analítica"),
+        ("2.4",   "Tributos e Impostos",              "Despesa", "Sintética"),
+        ("2.4.1", "DAS (Simples Nacional)",           "Despesa", "Analítica"),
+        ("2.4.2", "IPTU e Taxas Municipais",          "Despesa", "Analítica"),
+        ("2.5",   "Despesas Financeiras",             "Despesa", "Sintética"),
+        ("2.5.1", "Juros e Encargos",                 "Despesa", "Analítica"),
+        ("2.5.2", "Tarifas Bancárias",                "Despesa", "Analítica"),
+        ("2.6",   "Marketing e Publicidade",          "Despesa", "Analítica"),
+        ("2.7",   "Outras Despesas",                  "Despesa", "Analítica"),
     };
 
     var existingCodes = db.AccountPlans.Select(p => p.Code).ToHashSet();
-    foreach (var (code, name, type) in planSeed)
+    foreach (var (code, name, type, nature) in planSeed)
         if (!existingCodes.Contains(code))
-            db.AccountPlans.Add(new AccountPlan { Code = code, Name = name, Type = type });
+            db.AccountPlans.Add(new AccountPlan { Code = code, Name = name, Type = type, Nature = nature });
     db.SaveChanges();
 }
 
@@ -284,7 +286,7 @@ app.MapPut("/api/accountplans/{id:int}", async (int id, AccountPlan input, AppDb
     if (RequireRole(req, UserRole.Master) is IResult e) return e;
     var p = await db.AccountPlans.FindAsync(id);
     if (p is null) return Results.NotFound();
-    p.Code = input.Code; p.Name = input.Name; p.Type = input.Type;
+    p.Code = input.Code; p.Name = input.Name; p.Type = input.Type; p.Nature = input.Nature;
     await db.SaveChangesAsync();
     return Results.NoContent();
 });
