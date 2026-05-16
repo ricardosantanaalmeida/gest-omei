@@ -1,5 +1,6 @@
-/* ── Office 2013 Theme ─────────────────────────────────────────────────────── */
-:root {
+/* ── Tema Padrão: Office 2013 ────────────────────────────────────────────────── */
+:root,
+[data-theme="default"] {
   --office-blue:      #2B579A;
   --office-blue-dark: #1e3f72;
   --office-blue-lite: #E8F1FB;
@@ -19,6 +20,64 @@
   --shadow-sm:        0 1px 3px rgba(0,0,0,0.12);
   --shadow-md:        0 2px 8px rgba(0,0,0,0.14);
   --transition:       150ms ease;
+  --header-bg:        #2B579A;
+  --card-title-bg:    #FAFAFA;
+  --card-title-text:  #2B579A;
+  --modal-footer-bg:  #FAFAFA;
+}
+
+/* ── Tema Escuro ──────────────────────────────────────────────────────────────── */
+[data-theme="dark"] {
+  --office-blue:      #1565C0;
+  --office-blue-dark: #0D47A1;
+  --office-blue-lite: #0D1F3C;
+  --office-accent:    #42A5F5;
+  --tab-active-bar:   #42A5F5;
+  --bg:               #111111;
+  --surface:          #1E1E1E;
+  --border:           #3A3A3A;
+  --border-lite:      #2A2A2A;
+  --text:             #DCDCDC;
+  --text-muted:       #888888;
+  --text-white:       #FFFFFF;
+  --danger:           #EF5350;
+  --warn:             #FFA726;
+  --success:          #66BB6A;
+  --radius:           2px;
+  --shadow-sm:        0 1px 3px rgba(0,0,0,0.5);
+  --shadow-md:        0 2px 8px rgba(0,0,0,0.6);
+  --transition:       150ms ease;
+  --header-bg:        #0D1A2E;
+  --card-title-bg:    #161616;
+  --card-title-text:  #42A5F5;
+  --modal-footer-bg:  #161616;
+}
+
+/* ── Tema XP Clássico Cinza ──────────────────────────────────────────────────── */
+[data-theme="xp"] {
+  --office-blue:      #000080;
+  --office-blue-dark: #000060;
+  --office-blue-lite: #D8E4FF;
+  --office-accent:    #316AC5;
+  --tab-active-bar:   #000080;
+  --bg:               #D4D0C8;
+  --surface:          #FFFFFF;
+  --border:           #808080;
+  --border-lite:      #C0C0C0;
+  --text:             #000000;
+  --text-muted:       #555555;
+  --text-white:       #FFFFFF;
+  --danger:           #CC0000;
+  --warn:             #8B6914;
+  --success:          #006400;
+  --radius:           0px;
+  --shadow-sm:        none;
+  --shadow-md:        none;
+  --transition:       0ms;
+  --header-bg:        #000080;
+  --card-title-bg:    #D4D0C8;
+  --card-title-text:  #000000;
+  --modal-footer-bg:  #D4D0C8;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -40,7 +99,7 @@ html, body {
 
 /* ── Header bar (Office title bar) ─────────────────────────────────────────── */
 .app-header {
-  background: var(--office-blue);
+  background: var(--header-bg);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -240,13 +299,13 @@ html, body {
 .card-titlebar {
   padding: 0.65rem 1rem;
   border-bottom: 1px solid var(--border-lite);
-  background: #FAFAFA;
+  background: var(--card-title-bg);
 }
 
 .card-titlebar h2 {
   font-size: 0.95rem;
   font-weight: 700;
-  color: var(--office-blue);
+  color: var(--card-title-text);
 }
 
 .card-body { padding: 1rem; }
@@ -520,7 +579,7 @@ fieldset label { display: inline-flex; align-items: center; gap: 0.3rem; margin-
   justify-content: flex-end;
   gap: 0.4rem;
   border-top: 1px solid var(--border-lite);
-  background: #FAFAFA;
+  background: var(--modal-footer-bg);
   flex-shrink: 0;
 }
 
@@ -664,6 +723,220 @@ li.selected {
   border-color: var(--office-accent) !important;
   outline: 1px solid var(--office-accent);
 }
+
+/* ── Seletor de tema (header) ────────────────────────────────────────────────── */
+.theme-selector {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: rgba(255,255,255,0.9);
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin-right: 0.75rem;
+}
+
+.theme-selector select {
+  padding: 0.22rem 0.4rem;
+  border: 1px solid rgba(255,255,255,0.35);
+  border-radius: var(--radius);
+  background: rgba(255,255,255,0.15);
+  color: var(--text-white);
+  font-size: 0.8rem;
+  cursor: pointer;
+  outline: none;
+  width: auto;
+}
+
+.theme-selector select option { background: #1A2B4A; color: #fff; }
+
+/* ── Overrides tema Escuro ────────────────────────────────────────────────────── */
+[data-theme="dark"] body { background: var(--bg); color: var(--text); }
+
+[data-theme="dark"] .tab-bar { background: #1A1A1A; border-color: var(--border); }
+[data-theme="dark"] .tab { color: var(--text); }
+[data-theme="dark"] .tab:hover { background: var(--office-blue-lite); color: var(--office-accent); }
+[data-theme="dark"] .tab.active { background: #1A1A1A; color: var(--office-accent); }
+
+[data-theme="dark"] .tab-dropdown { background: #1E1E1E; }
+[data-theme="dark"] .tab-dropdown button { color: var(--text); }
+[data-theme="dark"] .tab-dropdown button:hover { background: var(--office-blue-lite); color: var(--office-accent); }
+[data-theme="dark"] .tab-dropdown button.active { background: var(--office-blue-lite); color: var(--office-accent); }
+
+[data-theme="dark"] li { background: #242424; border-color: var(--border); }
+[data-theme="dark"] li:hover { background: var(--office-blue-lite); }
+[data-theme="dark"] li.selected { background: #0D2F5A !important; border-color: var(--office-accent) !important; }
+
+[data-theme="dark"] input[type="text"],
+[data-theme="dark"] input[type="email"],
+[data-theme="dark"] input[type="password"],
+[data-theme="dark"] input[type="date"],
+[data-theme="dark"] input[type="number"],
+[data-theme="dark"] input[type="file"],
+[data-theme="dark"] select {
+  background: #2A2A2A;
+  color: var(--text);
+  border-color: #555;
+}
+
+[data-theme="dark"] input:focus,
+[data-theme="dark"] select:focus { border-color: var(--office-accent); box-shadow: 0 0 0 1px var(--office-accent); }
+
+[data-theme="dark"] .message { background: #1A3A1A; border-color: #2D6B2D; color: var(--success); }
+[data-theme="dark"] .message.error { background: #3D1010; border-color: #6B2020; color: var(--danger); }
+[data-theme="dark"] .warning { background: #2A2000; border-color: #6B5000; color: var(--warn); }
+
+[data-theme="dark"] fieldset { border-color: var(--border); }
+[data-theme="dark"] .card { border-color: var(--border); }
+
+[data-theme="dark"] .audit-panel { border-color: var(--border); border-top-color: var(--office-accent); }
+[data-theme="dark"] .audit-panel-header { background: #0D1A2E; border-color: #1A2B4A; color: var(--text); }
+[data-theme="dark"] .audit-panel-header strong { color: var(--text); }
+[data-theme="dark"] .audit-table td { border-color: var(--border-lite); color: var(--text); }
+[data-theme="dark"] .audit-table tr:hover td { background: var(--office-blue-lite); }
+
+[data-theme="dark"] .modal-overlay { background: rgba(0,0,0,0.6); }
+[data-theme="dark"] .modal-window { border-color: var(--border); }
+
+[data-theme="dark"] h2, [data-theme="dark"] h3 { color: var(--office-accent); }
+[data-theme="dark"] h3 { border-color: var(--border-lite); }
+
+[data-theme="dark"] .mode-info { background: var(--office-blue-lite); color: var(--office-accent); border-color: var(--office-accent); }
+[data-theme="dark"] .action-bar { border-color: var(--border); }
+
+/* ── Overrides tema XP Clássico ──────────────────────────────────────────────── */
+[data-theme="xp"] body { font-family: "Tahoma", sans-serif; }
+
+[data-theme="xp"] .app-header { background: #000080; border-bottom: 2px solid #C0C0C0; }
+
+[data-theme="xp"] .tab-bar {
+  background: #D4D0C8;
+  border-bottom: 2px solid #808080;
+  box-shadow: none;
+}
+[data-theme="xp"] .tab { color: var(--text); }
+[data-theme="xp"] .tab:hover { background: #EAE8E0; color: var(--text); border-color: transparent; }
+[data-theme="xp"] .tab.active { background: #D4D0C8; font-weight: 700; border: 2px solid; border-color: #FFFFFF #808080 #D4D0C8 #FFFFFF; border-bottom: none; }
+[data-theme="xp"] .tab.active::after { display: none; }
+
+[data-theme="xp"] .tab-dropdown {
+  background: #D4D0C8;
+  border: 2px solid #808080;
+  border-top: 3px solid #000080;
+  box-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+}
+[data-theme="xp"] .tab-dropdown button { color: var(--text); background: #D4D0C8; }
+[data-theme="xp"] .tab-dropdown button:hover { background: #316AC5; color: #FFFFFF; }
+[data-theme="xp"] .tab-dropdown button.active { background: #316AC5; color: #FFFFFF; font-weight: 700; }
+
+[data-theme="xp"] .card { border: 2px solid #808080; border-top: 3px solid #000080; box-shadow: none; background: #D4D0C8; }
+[data-theme="xp"] .card-titlebar {
+  background: linear-gradient(to right, #000080, #1084D0);
+  border-bottom: 2px solid #808080;
+}
+[data-theme="xp"] .card-titlebar h2 { color: #FFFFFF; }
+[data-theme="xp"] .card-body { background: #D4D0C8; }
+
+[data-theme="xp"] h2 { color: var(--text); }
+[data-theme="xp"] h3 { color: var(--text); border-color: #808080; }
+
+[data-theme="xp"] button {
+  background: #D4D0C8;
+  color: var(--text);
+  border: 2px solid;
+  border-color: #FFFFFF #808080 #808080 #FFFFFF;
+  border-radius: 0;
+  box-shadow: none;
+  font-family: "Tahoma", sans-serif;
+}
+[data-theme="xp"] button:hover:not(:disabled) {
+  background: #EAE8E0;
+  border-color: #FFFFFF #404040 #404040 #FFFFFF;
+  color: var(--text);
+}
+[data-theme="xp"] button:active:not(:disabled) {
+  border-color: #808080 #DFDFDF #DFDFDF #808080;
+}
+
+[data-theme="xp"] .btn-primary {
+  background: #D4D0C8;
+  color: var(--text);
+  border-color: #FFFFFF #808080 #808080 #FFFFFF;
+}
+[data-theme="xp"] .btn-primary:hover:not(:disabled) {
+  background: #EAE8E0;
+  border-color: #FFFFFF #404040 #404040 #FFFFFF;
+  color: var(--text);
+}
+[data-theme="xp"] .btn-danger { border-color: #FFFFFF #808080 #808080 #FFFFFF; }
+[data-theme="xp"] .btn-edit { border-color: #FFFFFF #808080 #808080 #FFFFFF; }
+
+[data-theme="xp"] .action-bar { border-color: #808080; }
+[data-theme="xp"] .btn-action {
+  background: #D4D0C8;
+  border: 2px solid;
+  border-color: #FFFFFF #808080 #808080 #FFFFFF;
+  border-radius: 0;
+  color: var(--text);
+}
+[data-theme="xp"] .btn-action:hover:not(:disabled) {
+  background: #EAE8E0;
+  border-color: #FFFFFF #404040 #404040 #FFFFFF;
+  color: var(--text);
+}
+[data-theme="xp"] .btn-action.active {
+  background: #B8B4AC;
+  border-color: #808080 #DFDFDF #DFDFDF #808080;
+  color: var(--text);
+}
+
+[data-theme="xp"] input[type="text"],
+[data-theme="xp"] input[type="email"],
+[data-theme="xp"] input[type="password"],
+[data-theme="xp"] input[type="date"],
+[data-theme="xp"] input[type="number"],
+[data-theme="xp"] select {
+  border: 2px inset #808080;
+  border-radius: 0;
+  background: #FFFFFF;
+  font-family: "Tahoma", sans-serif;
+}
+[data-theme="xp"] input:focus,
+[data-theme="xp"] select:focus {
+  border-color: #000080;
+  box-shadow: none;
+}
+
+[data-theme="xp"] li {
+  background: #FFFFFF;
+  border: 1px solid #808080;
+  border-radius: 0;
+}
+[data-theme="xp"] li:hover { background: #316AC5; color: #FFFFFF; }
+[data-theme="xp"] li.selected { background: #316AC5 !important; color: #FFFFFF !important; border-color: #000080 !important; outline: none; }
+
+[data-theme="xp"] .message { background: #FFFFCC; border: 2px solid #808080; color: #006400; border-radius: 0; }
+[data-theme="xp"] .message.error { background: #FFCCCC; border-color: #CC0000; color: #CC0000; }
+[data-theme="xp"] .warning { background: #FFFFF0; border: 2px solid #808080; border-radius: 0; color: var(--text); }
+
+[data-theme="xp"] fieldset { border: 2px groove #808080; border-radius: 0; }
+
+[data-theme="xp"] .search-bar input { border: 2px inset #808080; }
+
+[data-theme="xp"] .modal-window { border: 2px solid #808080; border-radius: 0; }
+[data-theme="xp"] .modal-titlebar { background: linear-gradient(to right, #000080, #1084D0); }
+[data-theme="xp"] .modal-footer { background: #D4D0C8; border-color: #808080; }
+[data-theme="xp"] .modal-titlebar button:hover:not(:disabled) { background: rgba(255,255,255,0.15); border-color: transparent; color: #fff; }
+
+[data-theme="xp"] .mode-info { background: #D8E4FF; border-color: #000080; color: #000080; border-radius: 0; }
+
+[data-theme="xp"] .audit-panel { border: 2px solid #808080; border-top: 3px solid #000080; border-radius: 0; }
+[data-theme="xp"] .audit-panel-header { background: linear-gradient(to right, #000080, #1084D0); border-color: #808080; }
+[data-theme="xp"] .audit-panel-header strong { color: #FFFFFF; }
+[data-theme="xp"] .audit-table { background: #FFFFFF; }
+[data-theme="xp"] .audit-table td { background: #FFFFFF; }
+[data-theme="xp"] .audit-table tr:hover td { background: #316AC5; color: #FFFFFF; }
+
+[data-theme="xp"] .form-actions { border-color: #808080; }
 
 /* ── Responsive ──────────────────────────────────────────────────────────────── */
 @media (max-width: 640px) {

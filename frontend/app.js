@@ -1,5 +1,19 @@
 const apiBase = "http://localhost:5000";
 
+// ── Tema ─────────────────────────────────────────────────────────────────────
+
+function applyTheme(theme) {
+  document.documentElement.setAttribute("data-theme", theme);
+  localStorage.setItem("gestomei-theme", theme);
+  const sel = document.getElementById("themeSelect");
+  if (sel) sel.value = theme;
+}
+
+(function initTheme() {
+  const saved = localStorage.getItem("gestomei-theme") || "default";
+  applyTheme(saved);
+})();
+
 // ── Perfil ──────────────────────────────────────────────────────────────────
 
 function getSelectedRole() {
