@@ -3,6 +3,7 @@ using System;
 using GestOmei.Api.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,38 +11,22 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace GestOmei.Api.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260516130000_AddAuditLogs")]
+    partial class AddAuditLogs
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "8.0.0");
 
             modelBuilder.Entity("GestOmei.Api.Models.AccountPlan", b =>
                 {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("Code")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Nature")
-                        .IsRequired()
-                        .HasDefaultValue("Analítica")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Type")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
+                    b.Property<int>("Id").ValueGeneratedOnAdd().HasColumnType("INTEGER");
+                    b.Property<string>("Code").IsRequired().HasColumnType("TEXT");
+                    b.Property<string>("Name").IsRequired().HasColumnType("TEXT");
+                    b.Property<string>("Nature").IsRequired().HasDefaultValue("Analítica").HasColumnType("TEXT");
+                    b.Property<string>("Type").IsRequired().HasColumnType("TEXT");
                     b.HasKey("Id");
-
                     b.ToTable("AccountPlans");
                 });
 
@@ -60,10 +45,7 @@ namespace GestOmei.Api.Migrations
 
             modelBuilder.Entity("GestOmei.Api.Models.Company", b =>
                 {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
+                    b.Property<int>("Id").ValueGeneratedOnAdd().HasColumnType("INTEGER");
                     b.Property<string>("Address").IsRequired().HasColumnType("TEXT");
                     b.Property<string>("AtividadePrimaria").IsRequired().HasColumnType("TEXT");
                     b.Property<string>("AtividadesSecundarias").IsRequired().HasColumnType("TEXT");
@@ -78,33 +60,25 @@ namespace GestOmei.Api.Migrations
                     b.Property<string>("Phone").IsRequired().HasColumnType("TEXT");
                     b.Property<string>("Responsavel").IsRequired().HasColumnType("TEXT");
                     b.Property<string>("TipoAtividade").IsRequired().HasColumnType("TEXT");
-
                     b.HasKey("Id");
                     b.ToTable("Companies");
                 });
 
             modelBuilder.Entity("GestOmei.Api.Models.CustomerSupplier", b =>
                 {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
+                    b.Property<int>("Id").ValueGeneratedOnAdd().HasColumnType("INTEGER");
                     b.Property<string>("Document").IsRequired().HasColumnType("TEXT");
                     b.Property<string>("Email").IsRequired().HasColumnType("TEXT");
                     b.Property<bool>("IsSupplier").HasColumnType("INTEGER");
                     b.Property<string>("Name").IsRequired().HasColumnType("TEXT");
                     b.Property<string>("Phone").IsRequired().HasColumnType("TEXT");
-
                     b.HasKey("Id");
                     b.ToTable("CustomerSuppliers");
                 });
 
             modelBuilder.Entity("GestOmei.Api.Models.Transaction", b =>
                 {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
+                    b.Property<int>("Id").ValueGeneratedOnAdd().HasColumnType("INTEGER");
                     b.Property<int?>("AccountPlanId").HasColumnType("INTEGER");
                     b.Property<string>("AccountPlanCode").IsRequired().HasDefaultValue("").HasColumnType("TEXT");
                     b.Property<string>("AccountPlanName").IsRequired().HasDefaultValue("").HasColumnType("TEXT");
@@ -114,23 +88,18 @@ namespace GestOmei.Api.Migrations
                     b.Property<DateTime>("Date").HasColumnType("TEXT");
                     b.Property<string>("Description").IsRequired().HasDefaultValue("").HasColumnType("TEXT");
                     b.Property<int>("Type").HasColumnType("INTEGER");
-
                     b.HasKey("Id");
                     b.ToTable("Transactions");
                 });
 
             modelBuilder.Entity("GestOmei.Api.Models.User", b =>
                 {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
+                    b.Property<int>("Id").ValueGeneratedOnAdd().HasColumnType("INTEGER");
                     b.Property<string>("Email").IsRequired().HasColumnType("TEXT");
                     b.Property<string>("FullName").IsRequired().HasColumnType("TEXT");
                     b.Property<string>("Password").IsRequired().HasColumnType("TEXT");
                     b.Property<int>("Role").HasColumnType("INTEGER");
                     b.Property<string>("Username").IsRequired().HasColumnType("TEXT");
-
                     b.HasKey("Id");
                     b.ToTable("Users");
                 });

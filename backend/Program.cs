@@ -33,6 +33,7 @@ using (var scope = app.Services.CreateScope())
             db.Database.EnsureCreated();
             _ = db.AccountPlans.FirstOrDefault();
             _ = db.Transactions.FirstOrDefault();
+            _ = db.AuditLogs.FirstOrDefault();
         }
         catch
         {
@@ -164,6 +165,17 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+static async Task LogAudit(AppDbContext db, HttpRequest req, string activity, string entity, string entityName, string company = "")
+{
+    var role = req.Headers.TryGetValue("X-User-Role", out var v) ? v.ToString() : "Desconhecido";
+    db.AuditLogs.Add(new AuditLog
+    {
+        Username = role, Activity = activity, Entity = entity,
+        EntityName = entityName, Company = company, DateTime = DateTime.Now
+    });
+    await db.SaveChangesAsync();
+}
+
 static UserRole? GetUserRole(HttpRequest request)
 {
     if (!request.Headers.TryGetValue("X-User-Role", out var values)) return null;
@@ -197,6 +209,7 @@ app.MapPost("/api/companies", async (Company company, AppDbContext db, HttpReque
     if (RequireRole(req, UserRole.Master, UserRole.Admin) is IResult e) return e;
     db.Companies.Add(company);
     await db.SaveChangesAsync();
+    await LogAudit(db, req, "Criou empresa", "Empresa", company.Name);
     return Results.Created($"/api/companies/{company.Id}", company);
 });
 
@@ -212,6 +225,7 @@ app.MapPut("/api/companies/{id:int}", async (int id, Company input, AppDbContext
     c.AtividadePrimaria = input.AtividadePrimaria; c.AtividadesSecundarias = input.AtividadesSecundarias;
     c.TipoAtividade = input.TipoAtividade; c.LogoBase64 = input.LogoBase64;
     await db.SaveChangesAsync();
+    await LogAudit(db, req, "Alterou empresa", "Empresa", c.Name);
     return Results.Ok(c);
 });
 
@@ -220,8 +234,10 @@ app.MapDelete("/api/companies/{id:int}", async (int id, AppDbContext db, HttpReq
     if (RequireRole(req, UserRole.Master) is IResult e) return e;
     var c = await db.Companies.FindAsync(id);
     if (c is null) return Results.NotFound();
+    var name = c.Name;
     db.Companies.Remove(c);
     await db.SaveChangesAsync();
+    await LogAudit(db, req, "Excluiu empresa", "Empresa", name);
     return Results.NoContent();
 });
 
@@ -230,7 +246,9 @@ app.MapPost("/api/companies/{id:int}/inactivate", async (int id, AppDbContext db
     if (RequireRole(req, UserRole.Master) is IResult e) return e;
     var c = await db.Companies.FindAsync(id);
     if (c is null) return Results.NotFound();
-    c.IsActive = false; await db.SaveChangesAsync(); return Results.Ok(c);
+    c.IsActive = false; await db.SaveChangesAsync();
+    await LogAudit(db, req, "Inativou empresa", "Empresa", c.Name);
+    return Results.Ok(c);
 });
 
 app.MapPost("/api/companies/{id:int}/activate", async (int id, AppDbContext db, HttpRequest req) =>
@@ -238,7 +256,9 @@ app.MapPost("/api/companies/{id:int}/activate", async (int id, AppDbContext db, 
     if (RequireRole(req, UserRole.Master) is IResult e) return e;
     var c = await db.Companies.FindAsync(id);
     if (c is null) return Results.NotFound();
-    c.IsActive = true; await db.SaveChangesAsync(); return Results.Ok(c);
+    c.IsActive = true; await db.SaveChangesAsync();
+    await LogAudit(db, req, "Reativou empresa", "Empresa", c.Name);
+    return Results.Ok(c);
 });
 
 // ── CLIENTE / FORNECEDOR ─────────────────────────────────────────────────────
@@ -261,6 +281,7 @@ app.MapPost("/api/customersuppliers", async (CustomerSupplier cs, AppDbContext d
     if (RequireRole(req, UserRole.Master, UserRole.Admin) is IResult e) return e;
     db.CustomerSuppliers.Add(cs);
     await db.SaveChangesAsync();
+    await LogAudit(db, req, cs.IsSupplier ? "Criou fornecedor" : "Criou cliente", "Cliente/Fornecedor", cs.Name);
     return Results.Created($"/api/customersuppliers/{cs.Id}", cs);
 });
 
@@ -272,6 +293,7 @@ app.MapPut("/api/customersuppliers/{id:int}", async (int id, CustomerSupplier in
     cs.Name = input.Name; cs.Document = input.Document;
     cs.Email = input.Email; cs.Phone = input.Phone; cs.IsSupplier = input.IsSupplier;
     await db.SaveChangesAsync();
+    await LogAudit(db, req, "Alterou cliente/fornecedor", "Cliente/Fornecedor", cs.Name);
     return Results.Ok(cs);
 });
 
@@ -280,8 +302,10 @@ app.MapDelete("/api/customersuppliers/{id:int}", async (int id, AppDbContext db,
     if (RequireRole(req, UserRole.Master, UserRole.Admin) is IResult e) return e;
     var cs = await db.CustomerSuppliers.FindAsync(id);
     if (cs is null) return Results.NotFound();
+    var name = cs.Name;
     db.CustomerSuppliers.Remove(cs);
     await db.SaveChangesAsync();
+    await LogAudit(db, req, "Excluiu cliente/fornecedor", "Cliente/Fornecedor", name);
     return Results.NoContent();
 });
 
@@ -305,6 +329,7 @@ app.MapPost("/api/users", async (User user, AppDbContext db, HttpRequest req) =>
     if (RequireRole(req, UserRole.Master, UserRole.Admin) is IResult e) return e;
     db.Users.Add(user);
     await db.SaveChangesAsync();
+    await LogAudit(db, req, "Criou usuário", "Usuário", user.Username);
     return Results.Created($"/api/users/{user.Id}", user);
 });
 
@@ -317,6 +342,7 @@ app.MapPut("/api/users/{id:int}", async (int id, User input, AppDbContext db, Ht
     if (!string.IsNullOrWhiteSpace(input.Password)) u.Password = input.Password;
     u.FullName = input.FullName; u.Email = input.Email; u.Role = input.Role;
     await db.SaveChangesAsync();
+    await LogAudit(db, req, "Alterou usuário", "Usuário", u.Username);
     return Results.Ok(u);
 });
 
@@ -325,8 +351,10 @@ app.MapDelete("/api/users/{id:int}", async (int id, AppDbContext db, HttpRequest
     if (RequireRole(req, UserRole.Master) is IResult e) return e;
     var u = await db.Users.FindAsync(id);
     if (u is null) return Results.NotFound();
+    var uname = u.Username;
     db.Users.Remove(u);
     await db.SaveChangesAsync();
+    await LogAudit(db, req, "Excluiu usuário", "Usuário", uname);
     return Results.NoContent();
 });
 
@@ -350,6 +378,7 @@ app.MapPost("/api/accountplans", async (AccountPlan plan, AppDbContext db, HttpR
     if (RequireRole(req, UserRole.Master) is IResult e) return e;
     db.AccountPlans.Add(plan);
     await db.SaveChangesAsync();
+    await LogAudit(db, req, "Criou plano de contas", "Plano de Contas", $"{plan.Code} — {plan.Name}");
     return Results.Created($"/api/accountplans/{plan.Id}", plan);
 });
 
@@ -360,6 +389,7 @@ app.MapPut("/api/accountplans/{id:int}", async (int id, AccountPlan input, AppDb
     if (p is null) return Results.NotFound();
     p.Code = input.Code; p.Name = input.Name; p.Type = input.Type; p.Nature = input.Nature;
     await db.SaveChangesAsync();
+    await LogAudit(db, req, "Alterou plano de contas", "Plano de Contas", $"{p.Code} — {p.Name}");
     return Results.NoContent();
 });
 
@@ -368,8 +398,10 @@ app.MapDelete("/api/accountplans/{id:int}", async (int id, AppDbContext db, Http
     if (RequireRole(req, UserRole.Master) is IResult e) return e;
     var p = await db.AccountPlans.FindAsync(id);
     if (p is null) return Results.NotFound();
+    var label = $"{p.Code} — {p.Name}";
     db.AccountPlans.Remove(p);
     await db.SaveChangesAsync();
+    await LogAudit(db, req, "Excluiu plano de contas", "Plano de Contas", label);
     return Results.NoContent();
 });
 
@@ -482,6 +514,17 @@ app.MapGet("/api/reports/extrato", async (AppDbContext db, HttpRequest req, stri
         totalDespesas = totalD,
         saldo = totalR - totalD
     });
+});
+
+// ── AUDITORIA ────────────────────────────────────────────────────────────────
+
+app.MapGet("/api/auditlogs", async (AppDbContext db, HttpRequest req, string? entity, int? limit) =>
+{
+    if (RequireRole(req, UserRole.Master, UserRole.Admin) is IResult e) return e;
+    var query = db.AuditLogs.AsNoTracking().AsQueryable();
+    if (!string.IsNullOrEmpty(entity)) query = query.Where(a => a.Entity == entity);
+    var results = await query.OrderByDescending(a => a.DateTime).Take(limit ?? 200).ToListAsync();
+    return Results.Ok(results);
 });
 
 app.MapGet("/api/me", (HttpRequest req) =>
