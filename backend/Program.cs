@@ -25,7 +25,13 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    try { db.Database.EnsureCreated(); }
+    try
+    {
+        db.Database.EnsureCreated();
+        // Teste rápido de schema — força erro se colunas estiverem desatualizadas
+        _ = db.AccountPlans.FirstOrDefault();
+        _ = db.Transactions.FirstOrDefault();
+    }
     catch
     {
         // Schema desatualizado — recria o banco (ambiente de desenvolvimento)
