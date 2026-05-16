@@ -191,7 +191,42 @@
       <section id="page-movimento" class="page">
         <div class="card">
           <div class="card-titlebar"><h2>💰 Movimento</h2></div>
-          <div class="card-body"><p style="color:var(--text-muted)">Em desenvolvimento.</p></div>
+          <div class="card-body">
+            <div class="search-bar">
+              <label style="font-weight:400;margin:0">De: <input type="date" id="movFrom" style="width:auto" /></label>
+              <label style="font-weight:400;margin:0">Até: <input type="date" id="movTo" style="width:auto" /></label>
+              <select id="movFilterType" style="width:auto">
+                <option value="">Todos</option>
+                <option value="0">Receitas</option>
+                <option value="1">Despesas</option>
+              </select>
+              <select id="movCompanyFilter" style="width:auto">
+                <option value="">Todas as Empresas</option>
+              </select>
+              <button type="button" onclick="loadTransactions()">↻ Atualizar</button>
+            </div>
+            <div id="movSummary" class="mov-summary"></div>
+            <ul id="transactions"></ul>
+            <h3>Novo Lançamento</h3>
+            <div id="movMessage" class="message" style="display:none"></div>
+            <form id="movForm">
+              <label>Data: *<input type="date" id="movDate" required /><span class="field-error">Campo obrigatório.</span></label>
+              <label>Descrição: *<input type="text" id="movDesc" required /><span class="field-error">Campo obrigatório.</span></label>
+              <label>Valor (R$): *<input type="number" id="movAmount" step="0.01" min="0.01" placeholder="0,00" required /><span class="field-error">Valor inválido.</span></label>
+              <label>Plano de Contas: *
+                <select id="movAccountPlan" required>
+                  <option value="">— Selecione —</option>
+                </select>
+                <span class="field-error">Selecione um plano de contas.</span>
+              </label>
+              <label>Empresa:
+                <select id="movCompany">
+                  <option value="">— Todas —</option>
+                </select>
+              </label>
+              <button type="submit" class="btn-primary">💾 Salvar Lançamento</button>
+            </form>
+          </div>
         </div>
       </section>
 
@@ -199,7 +234,40 @@
       <section id="page-relatorio" class="page">
         <div class="card">
           <div class="card-titlebar"><h2>📊 Relatório</h2></div>
-          <div class="card-body"><p style="color:var(--text-muted)">Em desenvolvimento.</p></div>
+          <div class="card-body">
+            <div class="search-bar">
+              <label style="font-weight:400;margin:0">De: <input type="date" id="repFrom" style="width:auto" /></label>
+              <label style="font-weight:400;margin:0">Até: <input type="date" id="repTo" style="width:auto" /></label>
+              <select id="repType" style="width:auto">
+                <option value="dre">DRE — Demonstrativo de Resultado</option>
+                <option value="extrato">Extrato de Movimentos</option>
+              </select>
+              <select id="repCompany" style="width:auto">
+                <option value="">Todas as Empresas</option>
+              </select>
+              <button type="button" class="btn-primary" onclick="generateReport()">📊 Gerar Relatório</button>
+            </div>
+
+            <div id="reportToolbar" class="report-toolbar" style="display:none">
+              <button type="button" onclick="exportPDF()">📄 Salvar PDF</button>
+              <button type="button" onclick="exportXLS()">📊 Salvar XLS</button>
+              <button type="button" onclick="printReport()">🖨️ Imprimir</button>
+              <div class="zoom-controls">
+                <button type="button" onclick="zoomOut()" title="Diminuir zoom">−</button>
+                <span id="zoomLevel">100%</span>
+                <button type="button" onclick="zoomIn()" title="Aumentar zoom">+</button>
+                <button type="button" onclick="zoomReset()" title="Zoom 100%">↺</button>
+              </div>
+            </div>
+
+            <div id="reportContainer" class="report-container">
+              <div id="reportPreview" class="report-preview">
+                <p style="color:var(--text-muted);text-align:center;padding:2rem">
+                  Selecione o período e clique em <strong>Gerar Relatório</strong>.
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -238,6 +306,9 @@
     </div>
   </div>
 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
