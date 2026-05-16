@@ -158,7 +158,6 @@ function showMessage(elementId, text) {
   }, 3500);
 }
 
-// Cria uma nova empresa enviando os dados para a API.
 // Lê um arquivo e converte para Base64.
 function readFileAsBase64(file) {
   return new Promise((resolve, reject) => {
@@ -167,51 +166,6 @@ function readFileAsBase64(file) {
     reader.onerror = (err) => reject(err);
     reader.readAsDataURL(file);
   });
-}
-
-async function createCompany(event) {
-  event.preventDefault();
-
-  const atividadeTipos = Array.from(document.querySelectorAll("input[name='companyTipoAtividade']:checked"))
-    .map((el) => el.value)
-    .join(",");
-
-  const logoFile = document.getElementById("companyLogo").files?.[0];
-  const logoBase64 = logoFile ? await readFileAsBase64(logoFile) : "";
-
-  const payload = {
-    name: document.getElementById("companyName").value,
-    cnpj: document.getElementById("companyCnpj").value,
-    address: document.getElementById("companyAddress").value,
-    phone: document.getElementById("companyPhone").value,
-    email: document.getElementById("companyEmail").value,
-    inscricaoEstadual: document.getElementById("companyInscricaoEstadual").value,
-    inscricaoMunicipal: document.getElementById("companyInscricaoMunicipal").value,
-    responsavel: document.getElementById("companyResponsavel").value,
-    dataAbertura: document.getElementById("companyDataAbertura").value,
-    atividadePrimaria: document.getElementById("companyAtividadePrimaria").value,
-    atividadesSecundarias: document.getElementById("companyAtividadesSecundarias").value,
-    tipoAtividade: atividadeTipos,
-    logoBase64,
-  };
-
-  const res = await fetch(`${apiBase}/api/companies`, {
-    method: "POST",
-    headers: {
-      ...getRoleHeader(),
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(payload),
-  });
-
-  if (!res.ok) {
-    alert(`Erro: ${res.status} ${res.statusText}`);
-    return;
-  }
-
-  alert("Empresa criada com sucesso!");
-  document.getElementById("companyForm").reset();
-  loadCompanies();
 }
 
 // Carrega a lista de clientes/fornecedores do backend.
@@ -318,10 +272,6 @@ async function createUser(event) {
   showMessage("userMessage", "Cadastro salvo com sucesso!");
   document.getElementById("userForm").reset();
   loadUsers();
-}
-
-function getSelectedRole() {
-  return document.getElementById("role")?.value ?? "Master";
 }
 
 function isMasterRole() {
