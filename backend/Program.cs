@@ -134,6 +134,43 @@ app.MapPost("/api/companies", async (Company company, AppDbContext db, HttpReque
     return Results.Created($"/api/companies/{company.Id}", company);
 });
 
+app.MapPut("/api/companies/{id:int}", async (int id, Company input, AppDbContext db, HttpRequest req) =>
+{
+    if (RequireRole(req, UserRole.Master, UserRole.Admin) is IResult notAllowed) return notAllowed;
+
+    var company = await db.Companies.FindAsync(id);
+    if (company is null) return Results.NotFound();
+
+    company.Name = input.Name;
+    company.Cnpj = input.Cnpj;
+    company.Address = input.Address;
+    company.Phone = input.Phone;
+    company.Email = input.Email;
+    company.InscricaoEstadual = input.InscricaoEstadual;
+    company.InscricaoMunicipal = input.InscricaoMunicipal;
+    company.Responsavel = input.Responsavel;
+    company.DataAbertura = input.DataAbertura;
+    company.AtividadePrimaria = input.AtividadePrimaria;
+    company.AtividadesSecundarias = input.AtividadesSecundarias;
+    company.TipoAtividade = input.TipoAtividade;
+    company.LogoBase64 = input.LogoBase64;
+
+    await db.SaveChangesAsync();
+    return Results.Ok(company);
+});
+
+app.MapDelete("/api/companies/{id:int}", async (int id, AppDbContext db, HttpRequest req) =>
+{
+    if (RequireRole(req, UserRole.Master) is IResult notAllowed) return notAllowed;
+
+    var company = await db.Companies.FindAsync(id);
+    if (company is null) return Results.NotFound();
+
+    db.Companies.Remove(company);
+    await db.SaveChangesAsync();
+    return Results.NoContent();
+});
+
 // Marca a empresa como inativa (somente Master)
 app.MapPost("/api/companies/{id:int}/inactivate", async (int id, AppDbContext db, HttpRequest req) =>
 {
@@ -181,6 +218,35 @@ app.MapPost("/api/customersuppliers", async (CustomerSupplier cs, AppDbContext d
     return Results.Created($"/api/customersuppliers/{cs.Id}", cs);
 });
 
+app.MapPut("/api/customersuppliers/{id:int}", async (int id, CustomerSupplier input, AppDbContext db, HttpRequest req) =>
+{
+    if (RequireRole(req, UserRole.Master, UserRole.Admin) is IResult notAllowed) return notAllowed;
+
+    var cs = await db.CustomerSuppliers.FindAsync(id);
+    if (cs is null) return Results.NotFound();
+
+    cs.Name = input.Name;
+    cs.Document = input.Document;
+    cs.Email = input.Email;
+    cs.Phone = input.Phone;
+    cs.IsSupplier = input.IsSupplier;
+
+    await db.SaveChangesAsync();
+    return Results.Ok(cs);
+});
+
+app.MapDelete("/api/customersuppliers/{id:int}", async (int id, AppDbContext db, HttpRequest req) =>
+{
+    if (RequireRole(req, UserRole.Master, UserRole.Admin) is IResult notAllowed) return notAllowed;
+
+    var cs = await db.CustomerSuppliers.FindAsync(id);
+    if (cs is null) return Results.NotFound();
+
+    db.CustomerSuppliers.Remove(cs);
+    await db.SaveChangesAsync();
+    return Results.NoContent();
+});
+
 // Usuário (somente Master/Admin)
 app.MapGet("/api/users", async (AppDbContext db, HttpRequest req) =>
 {
@@ -200,6 +266,36 @@ app.MapPost("/api/users", async (User user, AppDbContext db, HttpRequest req) =>
     db.Users.Add(user);
     await db.SaveChangesAsync();
     return Results.Created($"/api/users/{user.Id}", user);
+});
+
+app.MapPut("/api/users/{id:int}", async (int id, User input, AppDbContext db, HttpRequest req) =>
+{
+    if (RequireRole(req, UserRole.Master, UserRole.Admin) is IResult notAllowed) return notAllowed;
+
+    var user = await db.Users.FindAsync(id);
+    if (user is null) return Results.NotFound();
+
+    user.Username = input.Username;
+    if (!string.IsNullOrWhiteSpace(input.Password))
+        user.Password = input.Password;
+    user.FullName = input.FullName;
+    user.Email = input.Email;
+    user.Role = input.Role;
+
+    await db.SaveChangesAsync();
+    return Results.Ok(user);
+});
+
+app.MapDelete("/api/users/{id:int}", async (int id, AppDbContext db, HttpRequest req) =>
+{
+    if (RequireRole(req, UserRole.Master) is IResult notAllowed) return notAllowed;
+
+    var user = await db.Users.FindAsync(id);
+    if (user is null) return Results.NotFound();
+
+    db.Users.Remove(user);
+    await db.SaveChangesAsync();
+    return Results.NoContent();
 });
 
 // Plano de contas (qualquer perfil pode consultar, apenas Master pode alterar)

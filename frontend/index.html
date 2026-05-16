@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Gest-Omei (Front)</title>
+  <title>Gest-Omei</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -11,9 +11,9 @@
     <aside class="sidebar">
       <header>
         <h1>Gest-Omei</h1>
-        <p>Gestão MEI - cadastros e planos de contas.</p>
+        <p>Gestão MEI</p>
       </header>
-      <label style="margin-top:0.6rem; display:flex; flex-direction:column; gap:0.3rem; font-weight:600;">
+      <label style="padding:0.5rem 0.8rem 0; display:block;">
         Perfil de acesso:
         <select id="role">
           <option value="Master">Master</option>
@@ -22,239 +22,200 @@
           <option value="Viewer">Viewer</option>
         </select>
       </label>
-
       <nav class="main-nav">
         <div class="nav-group">
-          <button type="button" class="nav-group-toggle" data-group="cadastro">Cadastro ▾</button>
+          <button type="button" class="nav-group-toggle" data-group="cadastro">Cadastro</button>
           <div class="nav-group-items" data-group="cadastro">
-            <button type="button" data-page="company">Empresa</button>
-            <button type="button" data-page="user">Usuário</button>
-            <button type="button" data-page="accountplan">Plano de Contas</button>
-            <button type="button" data-page="customer">Cliente/Fornecedor</button>
+            <button type="button" data-page="company">🏢 Empresa</button>
+            <button type="button" data-page="user">👤 Usuário</button>
+            <button type="button" data-page="accountplan">📋 Plano de Contas</button>
+            <button type="button" data-page="customer">🤝 Cliente/Fornecedor</button>
           </div>
         </div>
-        <button type="button" data-page="movimento">Movimento</button>
-        <button type="button" data-page="relatorio">Relatório</button>
-        <button type="button" data-page="ajuda">Ajuda</button>
+        <button type="button" data-page="movimento">💰 Movimento</button>
+        <button type="button" data-page="relatorio">📊 Relatório</button>
+        <button type="button" data-page="ajuda">❓ Ajuda</button>
       </nav>
     </aside>
 
     <main class="main">
       <div id="roleInfo" class="message" style="display:none"></div>
 
-  <section id="page-company" class="page">
-    <div class="card">
-    <h2>Cadastro de Empresa</h2>
-    <div style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center; margin-bottom:0.8rem;">
-      <button id="loadCompanies">Carregar empresas</button>
-      <small>Atualize para ver as últimas</small>
-    </div>
-    <ul id="companies"></ul>
+      <!-- ═══ EMPRESA ═══ -->
+      <section id="page-company" class="page">
+        <div class="card">
+          <div class="card-titlebar"><h2>🏢 Cadastro de Empresa</h2></div>
+          <div class="card-body">
+            <div class="search-bar">
+              <input type="text" id="companySearch" placeholder="Buscar por nome ou CNPJ..." />
+              <button type="button" onclick="loadCompanies()">↻ Atualizar</button>
+            </div>
+            <ul id="companies"></ul>
+            <h3>Nova Empresa</h3>
+            <div id="companyMessage" class="message" style="display:none"></div>
+            <form id="companyForm">
+              <label>Nome: *<input type="text" id="companyName" required /><span class="field-error">Campo obrigatório.</span></label>
+              <label>CNPJ/CPF:<input type="text" id="companyCnpj" placeholder="00.000.000/0000-00 ou 000.000.000-00" /><span class="field-error">CNPJ ou CPF inválido.</span></label>
+              <label>Endereço:<input type="text" id="companyAddress" /></label>
+              <label>Telefone:<input type="text" id="companyPhone" placeholder="(00) 00000-0000" /></label>
+              <label>E-mail:<input type="email" id="companyEmail" /><span class="field-error">E-mail inválido.</span></label>
+              <label>Inscrição Estadual:<input type="text" id="companyInscricaoEstadual" /></label>
+              <label>Inscrição Municipal:<input type="text" id="companyInscricaoMunicipal" /></label>
+              <label>Responsável:<input type="text" id="companyResponsavel" /></label>
+              <label>Data de Abertura:<input type="date" id="companyDataAbertura" /></label>
+              <label>Atividade Primária:<input type="text" id="companyAtividadePrimaria" /></label>
+              <label>Atividades Secundárias:<input type="text" id="companyAtividadesSecundarias" placeholder="Separe por vírgula" /></label>
+              <fieldset>
+                <legend>Tipo de Atividade</legend>
+                <label><input type="checkbox" name="companyTipoAtividade" value="Servico" /> Prestadora de Serviço</label>
+                <label><input type="checkbox" name="companyTipoAtividade" value="Comercio" /> Comércio</label>
+                <label><input type="checkbox" name="companyTipoAtividade" value="Industria" /> Indústria</label>
+              </fieldset>
+              <label>Logo (PNG/JPG):<input type="file" id="companyLogo" accept="image/png,image/jpeg" /></label>
+              <button type="submit" class="btn-primary">💾 Salvar Empresa</button>
+            </form>
+          </div>
+        </div>
+      </section>
 
-    <h3>Nova empresa</h3>
-    <form id="companyForm">
-      <div id="companyMessage" class="message" style="display:none"></div>
-      <label>
-        Nome:
-        <input type="text" id="companyName" required />
-      </label>
-      <label>
-        CNPJ/CPF:
-        <input type="text" id="companyCnpj" />
-      </label>
-      <label>
-        Endereço:
-        <input type="text" id="companyAddress" />
-      </label>
-      <label>
-        Telefone:
-        <input type="text" id="companyPhone" />
-      </label>
-      <label>
-        E-mail:
-        <input type="email" id="companyEmail" />
-      </label>
-      <label>
-        Inscrição Estadual:
-        <input type="text" id="companyInscricaoEstadual" />
-      </label>
-      <label>
-        Inscrição Municipal:
-        <input type="text" id="companyInscricaoMunicipal" />
-      </label>
-      <label>
-        Responsável:
-        <input type="text" id="companyResponsavel" />
-      </label>
-      <label>
-        Data de abertura:
-        <input type="date" id="companyDataAbertura" />
-      </label>
-      <label>
-        Atividade primária:
-        <input type="text" id="companyAtividadePrimaria" />
-      </label>
-      <label>
-        Atividades secundárias:
-        <input type="text" id="companyAtividadesSecundarias" placeholder="Separe por vírgula" />
-      </label>
-      <fieldset style="border:1px solid rgba(255,255,255,0.18); padding:0.8rem; border-radius:12px;">
-        <legend>Tipo de atividade</legend>
-        <label><input type="checkbox" name="companyTipoAtividade" value="Servico" /> Prestadora de serviço</label>
-        <label><input type="checkbox" name="companyTipoAtividade" value="Comercio" /> Comércio</label>
-        <label><input type="checkbox" name="companyTipoAtividade" value="Industria" /> Indústria</label>
-      </fieldset>
-      <label>
-        Logo (PNG/JPG):
-        <input type="file" id="companyLogo" accept="image/png,image/jpeg" />
-      </label>
-      <button type="submit">Salvar empresa</button>
-    </form>
-    </div>
-  </section>
+      <!-- ═══ CLIENTE/FORNECEDOR ═══ -->
+      <section id="page-customer" class="page">
+        <div class="card">
+          <div class="card-titlebar"><h2>🤝 Cadastro de Cliente/Fornecedor</h2></div>
+          <div class="card-body">
+            <div class="search-bar">
+              <input type="text" id="customerSearch" placeholder="Buscar por nome ou documento..." />
+              <button type="button" onclick="loadCustomers()">↻ Atualizar</button>
+            </div>
+            <ul id="customers"></ul>
+            <h3>Novo Cliente/Fornecedor</h3>
+            <div id="customerMessage" class="message" style="display:none"></div>
+            <form id="customerForm">
+              <label>Nome: *<input type="text" id="customerName" required /><span class="field-error">Campo obrigatório.</span></label>
+              <label>CPF/CNPJ:<input type="text" id="customerDocument" /><span class="field-error">CPF ou CNPJ inválido.</span></label>
+              <label>E-mail:<input type="email" id="customerEmail" /><span class="field-error">E-mail inválido.</span></label>
+              <label>Telefone:<input type="text" id="customerPhone" /></label>
+              <label>Tipo:
+                <select id="customerIsSupplier">
+                  <option value="false">Cliente</option>
+                  <option value="true">Fornecedor</option>
+                </select>
+              </label>
+              <button type="submit" class="btn-primary">💾 Salvar</button>
+            </form>
+          </div>
+        </div>
+      </section>
 
-  <section id="page-customer" class="page">
-    <div class="card">
-      <h2>Cadastro Cliente/Fornecedor</h2>
-    <div style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center; margin-bottom:0.8rem;">
-      <button id="loadCustomers">Carregar clientes/fornecedores</button>
-      <small>Atualize para ver as últimas</small>
-    </div>
-    <ul id="customers"></ul>
+      <!-- ═══ USUÁRIO ═══ -->
+      <section id="page-user" class="page">
+        <div class="card">
+          <div class="card-titlebar"><h2>👤 Cadastro de Usuário</h2></div>
+          <div class="card-body">
+            <div class="search-bar">
+              <input type="text" id="userSearch" placeholder="Buscar por login ou nome..." />
+              <button type="button" onclick="loadUsers()">↻ Atualizar</button>
+            </div>
+            <ul id="users"></ul>
+            <h3>Novo Usuário</h3>
+            <div id="userMessage" class="message" style="display:none"></div>
+            <form id="userForm">
+              <label>Login: *<input type="text" id="userUsername" required /><span class="field-error">Campo obrigatório.</span></label>
+              <label>Senha: *<input type="password" id="userPassword" required /><span class="field-error">Campo obrigatório.</span></label>
+              <label>Nome Completo:<input type="text" id="userFullName" /></label>
+              <label>E-mail:<input type="email" id="userEmail" /><span class="field-error">E-mail inválido.</span></label>
+              <label>Perfil:
+                <select id="userRole">
+                  <option value="Master">Master</option>
+                  <option value="Admin">Admin</option>
+                  <option value="User">User</option>
+                  <option value="Viewer">Viewer</option>
+                </select>
+              </label>
+              <button type="submit" class="btn-primary">💾 Salvar Usuário</button>
+            </form>
+          </div>
+        </div>
+      </section>
 
-    <h3>Novo cliente/fornecedor</h3>
-    <form id="customerForm">
-      <div id="customerMessage" class="message" style="display:none"></div>
-      <label>
-        Nome:
-        <input type="text" id="customerName" required />
-      </label>
-      <label>
-        CPF/CNPJ:
-        <input type="text" id="customerDocument" />
-      </label>
-      <label>
-        E-mail:
-        <input type="email" id="customerEmail" />
-      </label>
-      <label>
-        Telefone:
-        <input type="text" id="customerPhone" />
-      </label>
-      <label>
-        É fornecedor?
-        <select id="customerIsSupplier">
-          <option value="false">Não</option>
-          <option value="true">Sim</option>
-        </select>
-      </label>
-      <button type="submit">Salvar cliente/fornecedor</button>
-    </form>
-    </div>
-  </section>
+      <!-- ═══ PLANO DE CONTAS ═══ -->
+      <section id="page-accountplan" class="page">
+        <div class="card">
+          <div class="card-titlebar"><h2>📋 Plano de Contas</h2></div>
+          <div class="card-body">
+            <div class="search-bar">
+              <input type="text" id="planSearch" placeholder="Buscar por código ou nome..." />
+              <button type="button" onclick="loadAccountPlans()">↻ Atualizar</button>
+            </div>
+            <ul id="accountPlans"></ul>
+            <h3>Novo Plano</h3>
+            <div class="warning" id="accountPlanWarning">
+              Apenas o perfil <strong>Master</strong> pode criar, editar ou excluir planos de contas.
+            </div>
+            <div id="accountPlanMessage" class="message" style="display:none"></div>
+            <form id="accountPlanForm">
+              <label>Código: *<input type="text" id="planCode" required placeholder="Ex: 1, 1.1, 2.1" /><span class="field-error">Campo obrigatório.</span></label>
+              <label>Nome: *<input type="text" id="planName" required /><span class="field-error">Campo obrigatório.</span></label>
+              <label>Tipo:
+                <select id="planType">
+                  <option value="Receita">Receita</option>
+                  <option value="Despesa">Despesa</option>
+                </select>
+              </label>
+              <button type="submit" class="btn-primary">💾 Salvar Plano</button>
+            </form>
+          </div>
+        </div>
+      </section>
 
-  <section id="page-user" class="page">
-    <div class="card">
-      <h2>Cadastro de Usuário</h2>
-    <div style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center; margin-bottom:0.8rem;">
-      <button id="loadUsers">Carregar usuários</button>
-      <small>Atualize para ver as últimas</small>
-    </div>
-    <ul id="users"></ul>
+      <!-- ═══ MOVIMENTO ═══ -->
+      <section id="page-movimento" class="page">
+        <div class="card">
+          <div class="card-titlebar"><h2>💰 Movimento</h2></div>
+          <div class="card-body"><p>Em desenvolvimento.</p></div>
+        </div>
+      </section>
 
-    <h3>Novo usuário</h3>
-    <form id="userForm">
-      <div id="userMessage" class="message" style="display:none"></div>
-      <label>
-        Login:
-        <input type="text" id="userUsername" required />
-      </label>
-      <label>
-        Senha:
-        <input type="password" id="userPassword" required />
-      </label>
-      <label>
-        Nome completo:
-        <input type="text" id="userFullName" />
-      </label>
-      <label>
-        E-mail:
-        <input type="email" id="userEmail" />
-      </label>
-      <label>
-        Perfil:
-        <select id="userRole">
-          <option value="Master">Master</option>
-          <option value="Admin">Admin</option>
-          <option value="User">User</option>
-          <option value="Viewer">Viewer</option>
-        </select>
-      </label>
-      <button type="submit">Salvar usuário</button>
-    </form>
-    </div>
-  </section>
+      <!-- ═══ RELATÓRIO ═══ -->
+      <section id="page-relatorio" class="page">
+        <div class="card">
+          <div class="card-titlebar"><h2>📊 Relatório</h2></div>
+          <div class="card-body"><p>Em desenvolvimento.</p></div>
+        </div>
+      </section>
 
-  <section id="page-accountplan" class="page">
-    <div class="card">
-      <h2>Cadastro de Plano de Contas</h2>
-    <div style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center; margin-bottom:0.8rem;">
-      <button id="loadAccountPlans">Carregar plano de contas</button>
-      <small>Atualize para ver as últimas</small>
-    </div>
-    <ul id="accountPlans"></ul>
-
-    <h3>Novo plano de contas</h3>
-    <div class="warning" id="accountPlanWarning">
-      Apenas usuário <strong>Master</strong> pode criar/editar/excluir planos de contas.
-    </div>
-    <form id="accountPlanForm">
-      <div id="accountPlanMessage" class="message" style="display:none"></div>
-      <p>Use códigos como <code>1</code>, <code>1.1</code> ou <code>2.1</code> (até 2 níveis).</p>
-
-      <label>
-        Código:
-        <input type="text" id="planCode" required />
-      </label>
-      <label>
-        Nome:
-        <input type="text" id="planName" required />
-      </label>
-      <label>
-        Tipo:
-        <select id="planType">
-          <option value="Receita">Receita</option>
-          <option value="Despesa">Despesa</option>
-        </select>
-      </label>
-      <button type="submit">Salvar plano</button>
-    </form>
-    </div>
-  </section>
-
-  <section id="page-movimento" class="page">
-    <div class="card">
-      <h2>Movimento</h2>
-      <p>Em desenvolvimento.</p>
-    </div>
-  </section>
-
-  <section id="page-relatorio" class="page">
-    <div class="card">
-      <h2>Relatório</h2>
-      <p>Em desenvolvimento.</p>
-    </div>
-  </section>
-
-  <section id="page-ajuda" class="page">
-    <div class="card">
-      <h2>Ajuda</h2>
-      <p>Use o menu à esquerda para navegar entre os cadastros.</p>
-      <p>O recurso de movimento e relatório será implementado em breve.</p>
-    </div>
-  </section>
-
+      <!-- ═══ AJUDA ═══ -->
+      <section id="page-ajuda" class="page">
+        <div class="card">
+          <div class="card-titlebar"><h2>❓ Ajuda</h2></div>
+          <div class="card-body">
+            <p>Use o menu à esquerda para navegar entre os módulos.</p>
+            <p><strong>Perfis de acesso:</strong></p>
+            <ul style="list-style:disc; padding-left:1.2rem;">
+              <li style="background:none; border:none; padding:0.1rem 0;">Master — acesso total</li>
+              <li style="background:none; border:none; padding:0.1rem 0;">Admin — criar/editar cadastros, sem alterar plano de contas</li>
+              <li style="background:none; border:none; padding:0.1rem 0;">User — somente visualização</li>
+              <li style="background:none; border:none; padding:0.1rem 0;">Viewer — somente visualização</li>
+            </ul>
+          </div>
+        </div>
+      </section>
     </main>
+  </div>
+
+  <!-- ═══ MODAL DE EDIÇÃO ═══ -->
+  <div id="editModal" class="modal-overlay" style="display:none">
+    <div class="modal-window">
+      <div class="modal-titlebar">
+        <span id="modalTitle">Editar</span>
+        <button type="button" onclick="closeModal()">✕</button>
+      </div>
+      <div class="modal-body" id="modalBody"></div>
+      <div class="modal-footer">
+        <button type="button" onclick="closeModal()">Cancelar</button>
+        <button type="button" class="btn-primary" id="modalSaveBtn">💾 Salvar</button>
+      </div>
+    </div>
   </div>
 
   <script src="app.js"></script>
