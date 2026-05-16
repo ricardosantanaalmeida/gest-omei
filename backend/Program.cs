@@ -25,18 +25,25 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    try
+    if (db.Database.IsSqlite())
     {
-        db.Database.EnsureCreated();
-        // Teste rápido de schema — força erro se colunas estiverem desatualizadas
-        _ = db.AccountPlans.FirstOrDefault();
-        _ = db.Transactions.FirstOrDefault();
+        // SQLite: recria automaticamente se schema desatualizado
+        try
+        {
+            db.Database.EnsureCreated();
+            _ = db.AccountPlans.FirstOrDefault();
+            _ = db.Transactions.FirstOrDefault();
+        }
+        catch
+        {
+            db.Database.EnsureDeleted();
+            db.Database.EnsureCreated();
+        }
     }
-    catch
+    else
     {
-        // Schema desatualizado — recria o banco (ambiente de desenvolvimento)
-        db.Database.EnsureDeleted();
-        db.Database.EnsureCreated();
+        // MySQL: aplica migrations pendentes (cria tabelas / colunas novas)
+        db.Database.Migrate();
     }
 
     if (!db.Users.Any(u => u.Role == UserRole.Master))
